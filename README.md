@@ -15,8 +15,9 @@ cluster-bootstrap/
     │   ├── gateway/cert-manager.yaml   # SSL management
     │   ├── gateway/external-dns.yaml
     │   ├── broker/rabbitmq.yaml
-        ├── iam/keycloak.yaml
-    │   ├── observability/prometheus.yaml          
+    │   ├── iam/keycloak.yaml
+    │   ├── observability/prometheus.yaml        
+    |   ├── observability/headlamp.yaml    
     │   └── observability/opentelemetry.yaml      
     │
     ├── applications/          # State and persistent services
@@ -77,4 +78,56 @@ repoURL: http://localhost:8080/k8s.git
 - Both scripts are idempotent - safe to run multiple times
 - K3s data is at `/var/lib/rancher/k3s`
 - To uninstall K3s: `curl -sfL https://get.k3s.io | sh -s - --uninstall`
+
+## Traefik Configuration
+
+K3s ships with Traefik as the default ingress controller. This repo includes manifests for TLS certificate management.
+
+### Let's Encrypt Setup
+
+The Traefik manifests use an email placeholder for Let's Encrypt. Before deploying:
+
+1. Edit `infra/services/gateway/traefik-acme-secret.yaml`
+2. Replace `LETS_ENCRYPT_EMAIL` with your actual email address
+
+```yaml
+stringData:
+  email: "admin@example.com"  # Replace with your email
+```
+
+### Middlewares Available
+
+- `redirect-http-to-https` - Redirects HTTP to HTTPS
+- `security-headers` - Adds security headers (X-Frame-Options, X-Content-Type-Options, etc.)
+- `rate-limit` - Rate limiting (100 req/s average, 50 burst)
+
+### Using with Ingress
+
+Add the appropriate annotations to your Ingress resources:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: my-app
+  annotations:
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/router.middlewares: kube-system-security-headers@kubernetescrd
+spec:
+  tls:
+    - hosts:
+        - example.com
+      secretName: my-app-tls
+  rules:
+    - host: example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: my-service
+                port:
+                  number: 80
+```
     

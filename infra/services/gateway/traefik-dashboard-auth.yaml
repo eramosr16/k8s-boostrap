@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: traefik-dashboard-auth
+  namespace: kube-system
+type: Opaque
+data:
+  # Base64 encoded htpasswd format: admin:$apr1$H6uskkkW$IgXLP6ewTrQlk3fRQZflw0
+  # Replace with your own credentials using: htpasswd -nb admin <password> | base64 -w0
+  auth: "YWRtaW46JGFwcjEkOCRQQkRKM1QkOTQ3LjE1NDkxMjk3NDg0MTcuMDg0NDQ5Ngo="
