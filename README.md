@@ -18,6 +18,7 @@ cluster-bootstrap/
     │   ├── iam/keycloak.yaml
     │   ├── observability/prometheus.yaml        
     |   ├── observability/headlamp.yaml    
+    |   ├── observability/seq.yaml    
     │   └── observability/opentelemetry.yaml      
     │
     ├── applications/          # State and persistent services
