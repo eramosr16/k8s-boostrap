@@ -15,7 +15,7 @@ cluster-bootstrap/
     │   ├── gateway/cert-manager.yaml   # SSL management
     │   ├── gateway/external-dns.yaml
     │   ├── broker/rabbitmq.yaml
-    │   ├── iam/keycloak.yaml
+    │   ├── iam/keycloak/           # Identity & access management
     │   ├── observability/prometheus.yaml        
     |   ├── observability/headlamp.yaml    
     |   ├── observability/seq.yaml    
@@ -114,19 +114,26 @@ Internal service endpoints accessible within the cluster:
 |-----------|---------------------------------------|------|-----------|
 | PostgreSQL| `postgres.infra.svc.cluster.local`   | 5432 | infra     |
 | Redis     | `redis.infra.svc.cluster.local`      | 6379 | infra     |
+| Keycloak | `keycloak.infra.svc.cluster.local`  | 8080 | infra     |
 
 ### Connection Examples
 
 **PostgreSQL:**
 ```bash
 # From another pod in the cluster
-psql -h postgres.infra.svc.cluster.local -p 5432 -U postgres -d postgres
+psql -h postgres.infra.svc.cluster.local -p 5432 -U postgres -d appdb
 ```
 
 **Redis:**
 ```bash
 # From another pod in the cluster
 redis-cli -h redis.infra.svc.cluster.local -p 6379
+```
+
+**Keycloak (internal):**
+```bash
+# From another pod in the cluster
+curl http://keycloak.infra.svc.cluster.local:8080
 ```
 
 ### Notes
@@ -138,10 +145,11 @@ redis-cli -h redis.infra.svc.cluster.local -p 6379
 
 Secrets use environment variable placeholders that are replaced during deployment:
 
-| Service   | Secret File          | Environment Variable |
-|-----------|---------------------|---------------------|
-| PostgreSQL| postgres-secret.yaml| `POSTGRES_PASSWORD` |
-| Redis     | redis-secret.yaml   | `REDIS_PASSWORD`    |
+| Service   | Secret File          | Environment Variable          |
+|-----------|---------------------|------------------------------|
+| PostgreSQL| postgres-secret.yaml| `POSTGRES_PASSWORD`          |
+| Redis     | redis-secret.yaml   | `REDIS_PASSWORD`            |
+| Keycloak  | keycloak-secret.yaml| `KEYCLOAK_ADMIN_PASSWORD`, `KEYCLOAK_DATABASE_PASSWORD` |
 
 ### Setting Passwords
 
@@ -153,7 +161,20 @@ export POSTGRES_PASSWORD="your-secure-password"
 
 # For Redis
 export REDIS_PASSWORD="your-secure-password"
+
+# For Keycloak
+export KEYCLOAK_ADMIN_PASSWORD="your-secure-password"
+export KEYCLOAK_DATABASE_PASSWORD="your-secure-password"
 ```
 
 Then update the secret file with the actual password or use a tool like `envsubst` to replace the placeholder during deployment.
+
+## Pre-Deployment Checklist
+
+Before deploying services, ensure the following are configured:
+
+- [ ] **DNS**: `auth.mydomain.com` points to your cluster's external IP
+- [ ] **Let's Encrypt**: Email configured in `traefik-acme-secret.yaml`
+- [ ] **Secrets**: All passwords set in respective secret files
+- [ ] **PostgreSQL**: Running and accessible before deploying Keycloak
     
