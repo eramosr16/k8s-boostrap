@@ -114,6 +114,7 @@ Internal service endpoints accessible within the cluster:
 |-----------|---------------------------------------|------|-----------|
 | PostgreSQL| `postgres.infra.svc.cluster.local`   | 5432 | infra     |
 | Redis     | `redis.infra.svc.cluster.local`      | 6379 | infra     |
+| RabbitMQ  | `rabbitmq.infra.svc.cluster.local`   | 5672 | infra     |
 | Keycloak | `keycloak.infra.svc.cluster.local`  | 8080 | infra     |
 
 ### Connection Examples
@@ -128,6 +129,13 @@ psql -h postgres.infra.svc.cluster.local -p 5432 -U postgres -d appdb
 ```bash
 # From another pod in the cluster
 redis-cli -h redis.infra.svc.cluster.local -p 6379
+```
+
+**RabbitMQ:**
+```bash
+# From another pod in the cluster
+# AMQP port 5672, Management UI at 15672
+amqp-connect -h rabbitmq.infra.svc.cluster.local -p 5672
 ```
 
 **Keycloak (internal):**
@@ -149,6 +157,7 @@ Secrets use environment variable placeholders that are replaced during deploymen
 |-----------|---------------------|------------------------------|
 | PostgreSQL| postgres-secret.yaml| `POSTGRES_PASSWORD`          |
 | Redis     | redis-secret.yaml   | `REDIS_PASSWORD`            |
+| RabbitMQ  | rabbitmq-secret.yaml| `RABBITMQ_DEFAULT_USER`, `RABBITMQ_DEFAULT_PASS` |
 | Keycloak  | keycloak-secret.yaml| `KEYCLOAK_ADMIN_PASSWORD`, `KEYCLOAK_DATABASE_PASSWORD` |
 
 ### Setting Passwords
@@ -161,6 +170,10 @@ export POSTGRES_PASSWORD="your-secure-password"
 
 # For Redis
 export REDIS_PASSWORD="your-secure-password"
+
+# For RabbitMQ
+export RABBITMQ_DEFAULT_USER="your-secure-user"
+export RABBITMQ_DEFAULT_PASS="your-secure-password"
 
 # For Keycloak
 export KEYCLOAK_ADMIN_PASSWORD="your-secure-password"
