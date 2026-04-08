@@ -9,8 +9,8 @@ cluster-bootstrap/
 │   └── root-app.yaml           # Watches the /infra folder
 └── infra/
     ├── services/         # Low-level platform services
-    │   ├── databases/postgres.yaml       # Database service
-    │   ├── databases/redis.yaml          # Caching service
+    │   ├── databases/postgres/       # Database service
+    │   ├── databases/redis/          # Caching service
     │   ├── gateway/traefik.yaml        # Ingress controller
     │   ├── gateway/cert-manager.yaml   # SSL management
     │   ├── gateway/external-dns.yaml
@@ -20,6 +20,10 @@ cluster-bootstrap/
     |   ├── observability/headlamp.yaml    
     |   ├── observability/seq.yaml    
     │   └── observability/opentelemetry.yaml      
+    │
+    ├── applications/          # State and persistent services
+    │   ├── cert-manager.yaml   # SSL management
+    │   └── external-dns.yaml
     │
     ├── applications/          # State and persistent services
     │   ├── cert-manager.yaml   # SSL management
@@ -102,33 +106,54 @@ stringData:
 - `security-headers` - Adds security headers (X-Frame-Options, X-Content-Type-Options, etc.)
 - `rate-limit` - Rate limiting (100 req/s average, 50 burst)
 
-### Using with Ingress
+## Service Connection Details
 
-Add the appropriate annotations to your Ingress resources:
+Internal service endpoints accessible within the cluster:
 
-```yaml
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: my-app
-  annotations:
-    traefik.ingress.kubernetes.io/router.tls: "true"
-    traefik.ingress.kubernetes.io/router.middlewares: kube-system-security-headers@kubernetescrd
-spec:
-  tls:
-    - hosts:
-        - example.com
-      secretName: my-app-tls
-  rules:
-    - host: example.com
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: my-service
-                port:
-                  number: 80
+| Service   | DNS Name                              | Port | Namespace |
+|-----------|---------------------------------------|------|-----------|
+| PostgreSQL| `postgres.infra.svc.cluster.local`   | 5432 | infra     |
+| Redis     | `redis.infra.svc.cluster.local`      | 6379 | infra     |
+
+### Connection Examples
+
+**PostgreSQL:**
+```bash
+# From another pod in the cluster
+psql -h postgres.infra.svc.cluster.local -p 5432 -U postgres -d postgres
 ```
+
+**Redis:**
+```bash
+# From another pod in the cluster
+redis-cli -h redis.infra.svc.cluster.local -p 6379
+```
+
+### Notes
+- Both PostgreSQL and Redis are configured with ClusterIP services (internal only)
+- Secrets are stored in `infra` namespace - update passwords before production use
+- Storage is persistent via PersistentVolumeClaim
+
+## Managing Secrets
+
+Secrets use environment variable placeholders that are replaced during deployment:
+
+| Service   | Secret File          | Environment Variable |
+|-----------|---------------------|---------------------|
+| PostgreSQL| postgres-secret.yaml| `POSTGRES_PASSWORD` |
+| Redis     | redis-secret.yaml   | `REDIS_PASSWORD`    |
+
+### Setting Passwords
+
+Before deploying, set the password by exporting the environment variable:
+
+```bash
+# For PostgreSQL
+export POSTGRES_PASSWORD="your-secure-password"
+
+# For Redis
+export REDIS_PASSWORD="your-secure-password"
+```
+
+Then update the secret file with the actual password or use a tool like `envsubst` to replace the placeholder during deployment.
     
