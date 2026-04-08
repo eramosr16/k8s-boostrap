@@ -1,10 +1,9 @@
 # K8s Cluster Manifests
 
-Work in `/home/ernesto/Repository/Cluster/k8s`. This repo defines a K8s cluster deployed via ArgoCD.
+This repo defines a K8s cluster deployed via ArgoCD.
 
 ## Directories
 
-- `bootstrap/` - Initial bootstrap (root-app watches `/apps`)
 - `infra/services/` - Platform services (databases, broker, gateway, observability)
 - `infra/applications/` - User-facing applications
 
@@ -23,3 +22,21 @@ Check ArgoCD sync status (run on cluster):
 ```bash
 argocd app get <app-name>
 ```
+
+## Scripts
+
+Bootstrap local K3s cluster:
+```bash
+./scripts/bootstrap.sh
+```
+
+Install ArgoCD:
+```bash
+./scripts/install-argocd.sh
+```
+
+## OpenSpec
+
+This repo uses OpenSpec for structured change management. Changes are stored in `openspec/changes/`.
+- Use `opencode` with the `openspec-*` skills for feature work
+- Archive changes before cleanup: `skill openspec-archive-change`
