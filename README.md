@@ -119,6 +119,7 @@ Internal service endpoints accessible within the cluster:
 | Grafana   | `grafana.infra.svc.cluster.local`     | 3000 | infra     |
 | Keycloak | `keycloak.infra.svc.cluster.local`     | 8080 | infra     |
 | ArgoCD    | `argocd.infra.svc.cluster.local`      | 443  | argocd    |
+| OpenTelemetry | `opentelemetry-collector.infra.svc.cluster.local` | 4317 | infra |
 
 ### Connection Examples
 

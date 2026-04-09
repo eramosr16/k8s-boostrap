@@ -14,3 +14,9 @@ data:
         url: http://prometheus.infra.svc.cluster.local:9090
         isDefault: true
         editable: false
+      - name: OpenTelemetry
+        type: prometheus
+        access: proxy
+        url: http://opentelemetry-collector.infra.svc.cluster.local:8889
+        isDefault: false
+        editable: false
