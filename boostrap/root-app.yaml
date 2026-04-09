@@ -6,7 +6,7 @@ metadata:
 spec:
   source:
     path: infra
-    repoURL: file:///home/ernesto/Repository/Cluster/k8s
+    repoURL: https://github.com/eramosr16/k8s-boostrap.git
     targetRevision: main
     directory:
       recurse: true

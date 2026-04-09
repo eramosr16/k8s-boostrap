@@ -2,7 +2,7 @@
 
 This repository defines a Kubernetes cluster deployed via ArgoCD using the App-of-Apps pattern. It separates **services** (core infrastructure like databases, caching, message brokers) from **applications** (end-user interfaces and gateways).
 
-> **Active Change**: `ensure-argocd-bootstrap` - Ensuring all services have ArgoCD Application definitions for automatic GitOps deployment.
+> **Active Change**: `create-run-all-script` - Creating automated run-all.sh script for end-to-end cluster bootstrap.
 
 ## Folder Structure
 
