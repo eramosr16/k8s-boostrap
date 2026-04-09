@@ -118,6 +118,7 @@ Internal service endpoints accessible within the cluster:
 | Prometheus| `prometheus.infra.svc.cluster.local`  | 9090 | infra     |
 | Grafana   | `grafana.infra.svc.cluster.local`     | 3000 | infra     |
 | Keycloak | `keycloak.infra.svc.cluster.local`     | 8080 | infra     |
+| ArgoCD    | `argocd.infra.svc.cluster.local`      | 443  | argocd    |
 
 ### Connection Examples
 
@@ -206,10 +207,34 @@ Then update the secret file with the actual password or use a tool like `envsubs
 
 Before deploying services, ensure the following are configured:
 
-- [ ] **DNS**: `auth.mydomain.com` and `metrics.mydomain.com` point to your cluster's external IP
+- [ ] **DNS**: `auth.mydomain.com`, `argocd.mydomain.com` and `metrics.mydomain.com` point to your cluster's external IP
 - [ ] **Let's Encrypt**: Email configured in `traefik-acme-secret.yaml`
 - [ ] **Secrets**: All passwords set in respective secret files
-- [ ] **Keycloak Client**: Grafana OIDC client configured in Keycloak realm
+- [ ] **Keycloak Client**: Grafana and ArgoCD OIDC clients configured in Keycloak master realm
 - [ ] **PostgreSQL**: Running and accessible before deploying Keycloak
 - [ ] **Prometheus**: Running before deploying Grafana (for datasource)
+
+## Keycloak Configuration
+
+All services that use Keycloak for authentication (Grafana, ArgoCD, etc.) are configured to use the **master realm**.
+
+### Existing Clients
+- **Grafana**: OIDC client for Grafana authentication
+- **ArgoCD**: OIDC client for ArgoCD authentication (PKCE enabled)
+
+### Groups
+Create the following groups in the master realm:
+- `argocd-admins` - Users in this group get admin access to ArgoCD
+- `grafana-admins` - Users in this group get admin access to Grafana
+- `grafana-editors` - Users in this group get editor access to Grafana
+
+### ArgoCD Keycloak Client Setup
+1. Create a new client in Keycloak (master realm)
+2. Client ID: `argocd`
+3. Client Protocol: `openid-connect`
+4. **Disable** Client Authentication (use PKCE)
+5. Valid Redirect URIs: `https://argocd.mydomain.com/auth/callback`
+6. Web Origins: `https://argocd.mydomain.com`
+7. Add client scope for groups with Token Mapper (Group Membership)
+8. Create `argocd-admins` group and add admin users
     
