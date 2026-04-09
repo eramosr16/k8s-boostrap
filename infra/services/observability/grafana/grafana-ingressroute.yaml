@@ -1,0 +1,19 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: grafana
+  namespace: infra
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`metrics.mydomain.com`)
+      kind: Rule
+      middlewares:
+        - name: security-headers
+          namespace: kube-system
+      services:
+        - name: grafana
+          port: 3000
+  tls:
+    certResolver: le

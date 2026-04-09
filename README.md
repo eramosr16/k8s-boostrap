@@ -112,17 +112,19 @@ Internal service endpoints accessible within the cluster:
 
 | Service   | DNS Name                              | Port | Namespace |
 |-----------|---------------------------------------|------|-----------|
-| PostgreSQL| `postgres.infra.svc.cluster.local`   | 5432 | infra     |
-| Redis     | `redis.infra.svc.cluster.local`      | 6379 | infra     |
-| RabbitMQ  | `rabbitmq.infra.svc.cluster.local`   | 5672 | infra     |
-| Keycloak | `keycloak.infra.svc.cluster.local`  | 8080 | infra     |
+| PostgreSQL| `postgres.infra.svc.cluster.local`    | 5432 | infra     |
+| Redis     | `redis.infra.svc.cluster.local`       | 6379 | infra     |
+| RabbitMQ  | `rabbitmq.infra.svc.cluster.local`    | 5672 | infra     |
+| Prometheus| `prometheus.infra.svc.cluster.local`  | 9090 | infra     |
+| Grafana   | `grafana.infra.svc.cluster.local`     | 3000 | infra     |
+| Keycloak | `keycloak.infra.svc.cluster.local`     | 8080 | infra     |
 
 ### Connection Examples
 
 **PostgreSQL:**
 ```bash
 # From another pod in the cluster
-psql -h postgres.infra.svc.cluster.local -p 5432 -U postgres -d appdb
+psql -h postgres.infra.svc.cluster.local -p 5432 -U postgres -d postgres
 ```
 
 **Redis:**
@@ -136,6 +138,18 @@ redis-cli -h redis.infra.svc.cluster.local -p 6379
 # From another pod in the cluster
 # AMQP port 5672, Management UI at 15672
 amqp-connect -h rabbitmq.infra.svc.cluster.local -p 5672
+```
+
+**Prometheus (internal):**
+```bash
+# From another pod in the cluster
+curl http://prometheus.infra.svc.cluster.local:9090
+```
+
+**Grafana (internal):**
+```bash
+# From another pod in the cluster
+curl http://grafana.infra.svc.cluster.local:3000
 ```
 
 **Keycloak (internal):**
@@ -153,11 +167,13 @@ curl http://keycloak.infra.svc.cluster.local:8080
 
 Secrets use environment variable placeholders that are replaced during deployment:
 
-| Service   | Secret File          | Environment Variable          |
-|-----------|---------------------|------------------------------|
-| PostgreSQL| postgres-secret.yaml| `POSTGRES_PASSWORD`          |
-| Redis     | redis-secret.yaml   | `REDIS_PASSWORD`            |
+| Service   | Secret File          | Environment Variable                            |
+|-----------|---------------------|--------------------------------------------------|
+| PostgreSQL| postgres-secret.yaml| `POSTGRES_PASSWORD`                              |
+| Redis     | redis-secret.yaml   | `REDIS_PASSWORD`                                 |
 | RabbitMQ  | rabbitmq-secret.yaml| `RABBITMQ_DEFAULT_USER`, `RABBITMQ_DEFAULT_PASS` |
+| Prometheus| -                   | -                                                |
+| Grafana   | grafana-secret.yaml | `GRAFANA_OIDC_CLIENT_SECRET`, `GRAFANA_ADMIN_PASSWORD` |
 | Keycloak  | keycloak-secret.yaml| `KEYCLOAK_ADMIN_PASSWORD`, `KEYCLOAK_DATABASE_PASSWORD` |
 
 ### Setting Passwords
@@ -175,6 +191,10 @@ export REDIS_PASSWORD="your-secure-password"
 export RABBITMQ_DEFAULT_USER="your-secure-user"
 export RABBITMQ_DEFAULT_PASS="your-secure-password"
 
+# For Grafana
+export GRAFANA_OIDC_CLIENT_SECRET="your-secure-client-secret"
+export GRAFANA_ADMIN_PASSWORD="your-secure-password"
+
 # For Keycloak
 export KEYCLOAK_ADMIN_PASSWORD="your-secure-password"
 export KEYCLOAK_DATABASE_PASSWORD="your-secure-password"
@@ -186,8 +206,10 @@ Then update the secret file with the actual password or use a tool like `envsubs
 
 Before deploying services, ensure the following are configured:
 
-- [ ] **DNS**: `auth.mydomain.com` points to your cluster's external IP
+- [ ] **DNS**: `auth.mydomain.com` and `metrics.mydomain.com` point to your cluster's external IP
 - [ ] **Let's Encrypt**: Email configured in `traefik-acme-secret.yaml`
 - [ ] **Secrets**: All passwords set in respective secret files
+- [ ] **Keycloak Client**: Grafana OIDC client configured in Keycloak realm
 - [ ] **PostgreSQL**: Running and accessible before deploying Keycloak
+- [ ] **Prometheus**: Running before deploying Grafana (for datasource)
     
