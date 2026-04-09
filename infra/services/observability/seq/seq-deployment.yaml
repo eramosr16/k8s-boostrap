@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seq
+  namespace: infra
+  labels:
+    app.kubernetes.io/name: seq
+    app.kubernetes.io/part-of: seq
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: seq
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: seq
+        app.kubernetes.io/part-of: seq
+    spec:
+      containers:
+        - name: seq
+          image: datalust/seq:latest
+          ports:
+            - name: http
+              containerPort: 5341
+              protocol: TCP
+          env:
+            - name: SEQ_ADMIN_EMAIL
+              value: "admin@mydomain.com"
+            - name: SEQ_ADMIN_PASSWORDKEY
+              value: "SEQ_ADMIN_PASSWORD"
+          envFrom:
+            - secretRef:
+                name: seq-secret
+          volumeMounts:
+            - name: seq-data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 5341
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 5341
+      volumes:
+        - name: seq-data
+          persistentVolumeClaim:
+            claimName: seq-pvc

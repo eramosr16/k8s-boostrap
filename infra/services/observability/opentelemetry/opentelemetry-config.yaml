@@ -32,6 +32,8 @@ data:
           service: opentelemetry-collector
       logging:
         loglevel: debug
+      otlphttp:
+        endpoint: http://seq.infra.svc.cluster.local:5341
 
     extensions:
       health_check:
@@ -48,3 +50,7 @@ data:
           receivers: [otlp]
           processors: [batch]
           exporters: [prometheus, logging]
+        logs:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [otlphttp, logging]
