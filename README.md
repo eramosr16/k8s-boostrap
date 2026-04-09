@@ -2,8 +2,6 @@
 
 This repository defines a Kubernetes cluster deployed via ArgoCD using the App-of-Apps pattern. It separates **services** (core infrastructure like databases, caching, message brokers) from **applications** (end-user interfaces and gateways).
 
-> **Active Change**: `create-run-all-script` - Creating automated run-all.sh script for end-to-end cluster bootstrap.
-
 ## Folder Structure
 
 ```
@@ -65,15 +63,72 @@ repoURL: git@github.com:<your-username>/k8s.git
 repoURL: http://localhost:8080/k8s.git
 ```
 
-## Quick Start - Bootstrap Local Cluster
+## Quick Start - Automated Bootstrap
+
+The easiest way to set up the cluster is using the automated `run-all.sh` script. It installs K3s, ArgoCD, prompts for all credentials, creates secrets, configures Keycloak clients, and verifies service health.
 
 ### Prerequisites
 
 - Linux host (Ubuntu, Debian, CentOS, etc.)
 - Root/sudo access
 - Internet connection
+- Git clone of this repository
 
-### Installation
+### One-Command Setup
+
+```bash
+./scripts/run-all.sh
+```
+
+The script will prompt you for credentials (passwords are hidden for security):
+
+1. **PostgreSQL** - Database password
+2. **Redis** - Cache password
+3. **RabbitMQ** - Username and password
+4. **Keycloak** - Admin password and database password
+5. **Seq** - Admin password
+6. **Let's Encrypt** - Email for TLS certificates
+7. **AWS** (optional) - Access key and secret for ECR
+
+### What the Script Does
+
+1. **Installs K3s** - Creates Kubernetes cluster
+2. **Installs ArgoCD** - GitOps deployment tool
+3. **Prompts for credentials** - Secure input for all service passwords
+4. **Creates Kubernetes secrets** - Stores credentials in `infra` namespace
+5. **Applies root-app.yaml** - Triggers ArgoCD to deploy all services
+6. **Configures Keycloak clients** - Creates OIDC clients for Grafana and ArgoCD automatically
+7. **Polls for health** - Waits until all services are healthy (timeout: 5 minutes)
+
+### Accessing Services
+
+After successful bootstrap:
+
+```bash
+# ArgoCD UI
+kubectl port-forward svc/argocd-server -n argocd 8080:443
+# Open http://localhost:8080 - Username: admin
+
+# Keycloak Admin Console
+kubectl port-forward svc/keycloak -n infra 8080:8080
+# Open http://localhost:8080 - Username: admin
+
+# Grafana
+kubectl port-forward svc/grafana -n infra 3000:3000
+# Open http://localhost:3000
+```
+
+### Quick Start - Manual Setup
+
+If you prefer to set up manually (or need more control), follow these steps:
+
+#### Prerequisites
+
+- Linux host (Ubuntu, Debian, CentOS, etc.)
+- Root/sudo access
+- Internet connection
+
+#### Installation
 
 1. **Install K3s** (creates Kubernetes cluster):
 
@@ -97,7 +152,7 @@ repoURL: http://localhost:8080/k8s.git
    - **Username**: `admin`
    - **Password**: Use the password shown during installation
 
-### Notes
+#### Notes
 
 - Both scripts are idempotent - safe to run multiple times
 - K3s data is at `/var/lib/rancher/k3s`
