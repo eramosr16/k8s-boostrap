@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: keycloak
-          image: bitnami/keycloak:24
+          image: bitnami/keycloak:{{IMAGE_KEYCLOAK}}
           ports:
             - containerPort: 8080
               name: http

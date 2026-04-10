@@ -1,0 +1,32 @@
+cluster:
+  domain: cluster.local
+  region: us-east-1
+
+traefik:
+  email: admin@example.com
+
+images:
+  keycloak: "24"
+  postgres: "16"
+  redis: "7"
+  rabbitmq: "3-management"
+  grafana: "10.2.0"
+  opentelemetry: "0.102.0"
+  headlamp: latest
+  seq: latest
+  prometheus: v2.45.0
+  ecr_credential_provider: v1.0.0
+  hello_world: latest
+
+keycloak:
+  realm: infra
+
+routes:
+  argocd: argocd
+  grafana: grafana
+  headlamp: cluster
+  keycloak: auth
+  seq: logs
+
+services:
+  namespace: infra

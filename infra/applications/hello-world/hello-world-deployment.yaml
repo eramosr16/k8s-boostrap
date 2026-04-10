@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: hello-world
-          image: ${HELLOWORLD_IMAGE}
+          image: {{IMAGE_HELLO_WORLD}}
           ports:
             - containerPort: 8080
               name: http

@@ -11,7 +11,7 @@ data:
     certificatesResolvers:
       letsencrypt:
         acme:
-          email: "LETS_ENCRYPT_EMAIL"
+          email: "{{TRAEFIK_EMAIL}}"
           storage: /letsencrypt/acme.json
           httpChallenge:
             entryPoint: web

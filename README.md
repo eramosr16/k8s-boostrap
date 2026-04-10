@@ -168,15 +168,26 @@ K3s ships with Traefik as the default ingress controller. This repo includes man
 
 ### Let's Encrypt Setup
 
-The Traefik manifests use an email placeholder for Let's Encrypt. Before deploying:
+The cluster uses a centralized `config.yaml` file for non-sensitive values. Before deploying:
 
-1. Edit `infra/services/gateway/traefik-acme-secret.yaml`
-2. Replace `LETS_ENCRYPT_EMAIL` with your actual email address
+1. Edit `config.yaml` in the repository root
+2. Set `traefik.email` to your actual email address
+3. Optionally customize `cluster.domain` and image tags
 
 ```yaml
-stringData:
-  email: "admin@example.com" # Replace with your email
+cluster:
+  domain: cluster.local
+
+traefik:
+  email: admin@example.com
+
+images:
+  headlamp: latest
+  seq: latest
+  prometheus: v2.45.0
 ```
+
+The `run-all.sh` script will automatically use these values when deploying.
 
 ### Middlewares Available
 
@@ -298,7 +309,7 @@ Then update the secret file with the actual password or use a tool like `envsubs
 Before deploying services, ensure the following are configured:
 
 - [ ] **DNS**: `auth.mydomain.com`, `argocd.mydomain.com`, `metrics.mydomain.com`, `logs.mydomain.com`, and `headlamp.mydomain.com` point to your cluster's external IP
-- [ ] **Let's Encrypt**: Email configured in `traefik-acme-secret.yaml`
+- [ ] **Let's Encrypt**: Email configured in `config.yaml`
 - [ ] **Secrets**: All passwords set in respective secret files
 - [ ] **Keycloak Client**: Grafana and ArgoCD OIDC clients configured in Keycloak master realm
 - [ ] **PostgreSQL**: Running and accessible before deploying Keycloak

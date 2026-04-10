@@ -6,6 +6,68 @@ REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 HEALTH_CHECK_TIMEOUT=300
 HEALTH_CHECK_INTERVAL=10
 KEYCLOAK_TIMEOUT=180
+CONFIG_FILE="${REPO_ROOT}/config.yaml"
+
+CLUSTER_DOMAIN="cluster.local"
+KEYCLOAK_REALM="infra"
+ROUTE_ARGOCD="argocd"
+ROUTE_GRAFANA="grafana"
+ROUTE_HEADLAMP="headlamp"
+ROUTE_KEYCLOAK="keycloak"
+ROUTE_SEQ="logs"
+
+load_cluster_config() {
+    if [ -f "$CONFIG_FILE" ]; then
+        if command -v python3 &> /dev/null; then
+            CLUSTER_DOMAIN=$(python3 -c "
+import yaml
+with open('$CONFIG_FILE') as f:
+    d = yaml.safe_load(f)
+    print(d.get('cluster', {}).get('domain', 'cluster.local'))
+" 2>/dev/null) || CLUSTER_DOMAIN="cluster.local"
+            KEYCLOAK_REALM=$(python3 -c "
+import yaml
+with open('$CONFIG_FILE') as f:
+    d = yaml.safe_load(f)
+    print(d.get('keycloak', {}).get('realm', 'infra'))
+" 2>/dev/null) || KEYCLOAK_REALM="infra"
+            ROUTE_ARGOCD=$(python3 -c "
+import yaml
+with open('$CONFIG_FILE') as f:
+    d = yaml.safe_load(f)
+    print(d.get('routes', {}).get('argocd', 'argocd'))
+" 2>/dev/null) || ROUTE_ARGOCD="argocd"
+            ROUTE_GRAFANA=$(python3 -c "
+import yaml
+with open('$CONFIG_FILE') as f:
+    d = yaml.safe_load(f)
+    print(d.get('routes', {}).get('grafana', 'grafana'))
+" 2>/dev/null) || ROUTE_GRAFANA="grafana"
+            ROUTE_HEADLAMP=$(python3 -c "
+import yaml
+with open('$CONFIG_FILE') as f:
+    d = yaml.safe_load(f)
+    print(d.get('routes', {}).get('headlamp', 'headlamp'))
+" 2>/dev/null) || ROUTE_HEADLAMP="headlamp"
+            ROUTE_KEYCLOAK=$(python3 -c "
+import yaml
+with open('$CONFIG_FILE') as f:
+    d = yaml.safe_load(f)
+    print(d.get('routes', {}).get('keycloak', 'keycloak'))
+" 2>/dev/null) || ROUTE_KEYCLOAK="keycloak"
+            ROUTE_SEQ=$(python3 -c "
+import yaml
+with open('$CONFIG_FILE') as f:
+    d = yaml.safe_load(f)
+    print(d.get('routes', {}).get('seq', 'logs'))
+" 2>/dev/null) || ROUTE_SEQ="logs"
+        fi
+    fi
+    export CLUSTER_DOMAIN KEYCLOAK_REALM
+    export ROUTE_ARGOCD ROUTE_GRAFANA ROUTE_HEADLAMP ROUTE_KEYCLOAK ROUTE_SEQ
+}
+
+load_cluster_config
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -22,6 +84,117 @@ log_warn() {
 
 log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
+}
+
+create_keycloak_infra_realm() {
+    log_info "=== Creating Keycloak infra Realm ==="
+    
+    local keycloak_pod
+    keycloak_pod=$(kubectl get pods -n infra -l app=keycloak -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+    
+    if [ -z "$keycloak_pod" ]; then
+        log_error "Keycloak pod not found"
+        return 1
+    fi
+    
+    export KEYCLOAK_HOME="/opt/keycloak"
+    export PATH="$KEYCLOAK_HOME/bin:$PATH"
+    
+    local keycloak_url="http://keycloak.infra.svc.cluster.local:8080"
+    local keycloak_external="https://keycloak.${CLUSTER_DOMAIN:-cluster.local}"
+    
+    log_info "Waiting for Keycloak API to be ready..."
+    local api_ready=false
+    for i in {1..30}; do
+        if kubectl exec -n infra "$keycloak_pod" -- curl -sf "$keycloak_url/health/ready" &> /dev/null; then
+            api_ready=true
+            break
+        fi
+        sleep 2
+    done
+    
+    if [ "$api_ready" = "false" ]; then
+        for i in {1..30}; do
+            if kubectl exec -n infra "$keycloak_pod" -- curl -sf "$keycloak_url/realms/master" &> /dev/null; then
+                api_ready=true
+                break
+            fi
+            sleep 2
+        done
+    fi
+    
+    log_info "Creating $KEYCLOAK_REALM realm..."
+    
+    kubectl exec -n infra "$keycloak_pod" -- bash -c "
+        export KEYCLOAK_HOME='/opt/keycloak'
+        export PATH=\"\$KEYCLOAK_HOME/bin:\$PATH\"
+        REALM='$KEYCLOAK_REALM'
+        
+        kcadm config credentials --server '$keycloak_url' --realm master --user admin --password '\$KEYCLOAK_ADMIN_PASSWORD' || exit 1
+        
+        if kcadm get realms/\$REALM &> /dev/null; then
+            echo \"\$REALM realm already exists\"
+        else
+            kcadm create realms -s realm=\$REALM -s enabled=true -s loginWithEmailAllowed=false -s duplicateEmailsAllowed=true -s resetPasswordAllowed=false
+            echo \"\$REALM realm created\"
+        fi
+    "
+    
+    log_info "Creating $KEYCLOAK_REALM realm clients..."
+    
+    local grafana_uri="https://${ROUTE_GRAFANA}.${CLUSTER_DOMAIN}"
+    local argocd_uri="https://${ROUTE_ARGOCD}.${CLUSTER_DOMAIN}"
+    local headlamp_uri="https://${ROUTE_HEADLAMP}.${CLUSTER_DOMAIN}"
+    local seq_uri="https://${ROUTE_SEQ}.${CLUSTER_DOMAIN}"
+    
+    kubectl exec -n infra "$keycloak_pod" -- bash -c "
+        export KEYCLOAK_HOME='/opt/keycloak'
+        export PATH=\"\$KEYCLOAK_HOME/bin:\$PATH\"
+        REALM='$KEYCLOAK_REALM'
+        
+        kcadm config credentials --server '$keycloak_url' --realm master --user admin --password '\$KEYCLOAK_ADMIN_PASSWORD' || exit 1
+        
+        echo 'Creating k3s-api client...'
+        kcadm create clients -r '\$REALM' -s clientId=k3s-api -s enabled=true -s protocol=openid-connect -s publicClient=false -s serviceAccountsEnabled=true -s standardFlowEnabled=false -s directAccessGrantsEnabled=true
+        
+        echo 'Creating Grafana client...'
+        kcadm create clients -r '\$REALM' -s clientId=\$REALM-grafana -s enabled=true -s protocol=openid-connect -s publicClient=false -s standardFlowEnabled=true -s 'redirectUris=[\"http://localhost:3000/*\",\"http://grafana.infra.svc.cluster.local:3000/*\"]' -s webOrigins='[\"+\"]' -s serviceAccountsEnabled=true || true
+        
+        echo 'Creating ArgoCD client...'
+        kcadm create clients -r '\$REALM' -s clientId=\$REALM-argocd -s enabled=true -s protocol=openid-connect -s publicClient=false -s standardFlowEnabled=true -s 'redirectUris=[\"http://localhost:8080/*\",\"http://argocd.infra.svc.cluster.local/*\"]' -s webOrigins='[\"+\"]' -s serviceAccountsEnabled=true || true
+        
+        echo 'Creating Headlamp client...'
+        kcadm create clients -r '\$REALM' -s clientId=\$REALM-headlamp -s enabled=true -s protocol=openid-connect -s publicClient=false -s standardFlowEnabled=true -s 'redirectUris=[\"http://localhost:4466/*\",\"http://headlamp.infra.svc.cluster.local/*\"]' -s webOrigins='[\"+\"]' -s serviceAccountsEnabled=true || true
+        
+        echo 'Creating Seq client...'
+        kcadm create clients -r '\$REALM' -s clientId=\$REALM-seq -s enabled=true -s protocol=openid-connect -s publicClient=false -s standardFlowEnabled=true -s 'redirectUris=[\"http://localhost:5341/*\",\"http://seq.infra.svc.cluster.local:5341/*\"]' -s webOrigins='[\"+\"]' -s serviceAccountsEnabled=true || true
+        
+        echo \"\$REALM clients created\"
+    "
+    
+    log_info " $KEYCLOAK_REALM realm setup complete."
+}
+
+configure_k3s_oidc() {
+    log_info "=== Configuring K3s OIDC with Keycloak ==="
+    
+    local keycloak_external="https://keycloak.${CLUSTER_DOMAIN:-cluster.local}"
+    local k3s_config_dir="/etc/rancher/k3s"
+    
+    mkdir -p "$k3s_config_dir"
+    
+    cat > "${k3s_config_dir}/k3s_server.yaml" << EOFCONFIG
+kube-apiserver-arg:
+  - oidc-issuer-url=https://keycloak.cluster.local/realms/$KEYCLOAK_REALM
+  - oidc-username-claim=preferred_username
+  - oidc-groups-claim=groups
+  - oidc-client-id=k3s-api
+EOFCONFIG
+    
+    sed -i "s/keycloak.cluster.local/${CLUSTER_DOMAIN:-cluster.local}/g" "${k3s_config_dir}/k3s_server.yaml"
+    
+    log_info "K3s OIDC config written to ${k3s_config_dir}/k3s_server.yaml"
+    log_info "Restart K3s to apply: sudo systemctl restart k3s"
 }
 
 prompt_secret() {
@@ -419,6 +592,12 @@ main() {
     sleep 30
     
     wait_for_keycloak
+    echo
+    
+    create_keycloak_infra_realm
+    echo
+    
+    configure_k3s_oidc
     echo
     
     prompt_grafana_password

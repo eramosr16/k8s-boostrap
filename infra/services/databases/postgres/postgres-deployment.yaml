@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: postgres
-          image: bitnami/postgresql:16
+          image: bitnami/postgresql:{{IMAGE_POSTGRES}}
           ports:
             - containerPort: 5432
               name: postgres
