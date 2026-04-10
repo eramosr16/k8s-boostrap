@@ -277,12 +277,21 @@ configure_keycloak_clients() {
             -s webOrigins='[\"+\"]' \
             -s serviceAccountsEnabled=true
         
-        echo 'Clients created successfully.'
-    "
+        echo 'Creating Headlamp client...'
+        kcadm create clients -r '$realm' \
+            -s clientId=headlamp \
+            -s enabled=true \
+            -s protocol=openid-connect \
+            -s publicClient=false \
+            -s standardFlowEnabled=true \
+            -s 'redirectUris=[\"http://localhost:4466/*\",\"http://headlamp.infra.svc.cluster.local/*\"]' \
+            -s webOrigins='[\"+\"]' \
+            -s serviceAccountsEnabled=true
+        "
     
     log_info "Retrieving client secrets from Keycloak..."
     
-    local grafana_secret argocd_secret
+    local grafana_secret argocd_secret headlamp_secret
     
     grafana_secret=$(kubectl exec -n infra "$keycloak_pod" -- bash -c "
         export KEYCLOAK_HOME='/opt/keycloak'
@@ -299,6 +308,16 @@ configure_keycloak_clients() {
         export PATH=\"\$KEYCLOAK_HOME/bin:\$PATH\"
         
         CID=\$(kcadm get clients -r master -q clientId=argocd --fields id 2>/dev/null | tr -d '\"')
+        if [ -n \"\$CID\" ]; then
+            kcadm get clients/\$CID/client-secret -r master 2>/dev/null | jq -r '.value' 2>/dev/null || echo ''
+        fi
+    " | tr -d '\r\n')
+    
+    headlamp_secret=$(kubectl exec -n infra "$keycloak_pod" -- bash -c "
+        export KEYCLOAK_HOME='/opt/keycloak'
+        export PATH=\"\$KEYCLOAK_HOME/bin:\$PATH\"
+        
+        CID=\$(kcadm get clients -r master -q clientId=headlamp --fields id 2>/dev/null | tr -d '\"')
         if [ -n \"\$CID\" ]; then
             kcadm get clients/\$CID/client-secret -r master 2>/dev/null | jq -r '.value' 2>/dev/null || echo ''
         fi
@@ -326,6 +345,17 @@ configure_keycloak_clients() {
         log_info "ArgoCD client secret retrieved."
     else
         log_warn "Could not retrieve ArgoCD client secret."
+    fi
+    
+    if [ -n "$headlamp_secret" ] && [ "$headlamp_secret" != "null" ]; then
+        kubectl create secret generic headlamp-oidc-secret -n infra \
+            --from-literal=OIDC_CLIENT_ID=headlamp \
+            --from-literal=OIDC_CLIENT_SECRET="$headlamp_secret" \
+            --from-literal=OIDC_ISSUER_URL="$keycloak_url/realms/master" \
+            --dry-run=client -o yaml | kubectl apply -f -
+        log_info "Headlamp OIDC secret created with Keycloak credentials."
+    else
+        log_warn "Could not retrieve Headlamp client secret."
     fi
     
     log_info "Keycloak clients configured."
@@ -402,6 +432,8 @@ main() {
         log_info "All services are healthy!"
         log_info "ArgoCD UI: kubectl port-forward svc/argocd-server -n argocd 8080:443"
         log_info "Keycloak: kubectl port-forward svc/keycloak -n infra 8080:8080"
+        log_info "Headlamp: kubectl port-forward svc/headlamp -n infra 4466:80"
+        log_info "  (Login with: kubectl create token headlamp -n infra)"
         exit 0
     else
         log_error "=== Bootstrap Failed ==="

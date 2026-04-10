@@ -265,6 +265,7 @@ Secrets use environment variable placeholders that are replaced during deploymen
 | Grafana    | grafana-secret.yaml  | `GRAFANA_OIDC_CLIENT_SECRET`, `GRAFANA_ADMIN_PASSWORD`  |
 | Keycloak   | keycloak-secret.yaml | `KEYCLOAK_ADMIN_PASSWORD`, `KEYCLOAK_DATABASE_PASSWORD` |
 | Seq        | seq-secret.yaml      | `SEQ_ADMIN_PASSWORD`                                    |
+| Headlamp   | -                    | - (uses service account token)                          |
 
 ### Setting Passwords
 

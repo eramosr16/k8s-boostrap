@@ -20,6 +20,26 @@ spec:
           args:
             - "-in-cluster"
             - "-plugins-dir=/headlamp/plugins"
+            - "-oidc-client-id=$(OIDC_CLIENT_ID)"
+            - "-oidc-client-secret=$(OIDC_CLIENT_SECRET)"
+            - "-oidc-idp-issuer-url=$(OIDC_ISSUER_URL)"
+            - "-oidc-use-access-token=true"
+          env:
+            - name: OIDC_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: headlamp-oidc-secret
+                  key: OIDC_CLIENT_ID
+            - name: OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: headlamp-oidc-secret
+                  key: OIDC_CLIENT_SECRET
+            - name: OIDC_ISSUER_URL
+              valueFrom:
+                secretKeyRef:
+                  name: headlamp-oidc-secret
+                  key: OIDC_ISSUER_URL
           ports:
             - containerPort: 4466
               name: http
