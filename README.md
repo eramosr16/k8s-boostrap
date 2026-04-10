@@ -16,13 +16,13 @@ This repository uses two agentic tools for managing changes and implementing fea
 
 An interactive CLI tool that helps with software engineering tasks. It can read, edit, and create files, run commands, and work with the codebase.
 
-- **GitHub**: https://github.com/anomalyco/opencode
+- **OpenCode**: https://opencode.ai/
 
 ### OpenSpec
 
 A structured change management system that provides artifact-driven workflows for feature development. It tracks proposals, designs, specs, and tasks through a complete change lifecycle.
 
-- **GitHub**: https://github.com/anomalyco/openspec
+- **GitHub**: https://github.com/Fission-AI/OpenSpec
 
 Changes are stored in `openspec/changes/` and organized in an `archive/` subdirectory when completed.
 
@@ -222,17 +222,18 @@ k3s:
 ```
 
 The `cluster.domain` in config.yaml (default: `cluster.local`) is used for both:
+
 - Kubernetes cluster domain (for service DNS)
 - K3s `--cluster-domain` flag (applied automatically during install)
 
 ### Available Disable Options
 
-| Option | Description |
-|--------|-------------|
-| `traefik` | Disable the built-in Traefik ingress controller |
-| `servicelb` | Disable the built-in ServiceLB load balancer |
-| `local-storage` | Disable the built-in local storage driver |
-| `metrics-server` | Disable the built-in metrics server |
+| Option           | Description                                     |
+| ---------------- | ----------------------------------------------- |
+| `traefik`        | Disable the built-in Traefik ingress controller |
+| `servicelb`      | Disable the built-in ServiceLB load balancer    |
+| `local-storage`  | Disable the built-in local storage driver       |
+| `metrics-server` | Disable the built-in metrics server             |
 
 ### Example: Disable Traefik
 
@@ -255,6 +256,7 @@ k3s:
 ```
 
 Common K3s server flags:
+
 - `--disable-cloud-controller` - Disable Kubernetes cloud controller
 - `--disable-network-policy` - Disable K3s default network policy
 - `--write-kubeconfig-mode` - Set kubeconfig permissions (e.g., "644")
@@ -265,6 +267,7 @@ Common K3s server flags:
 ### Single Node vs HA Cluster
 
 This repository currently deploys a **single-node K3s cluster** by default, suitable for:
+
 - Development and testing
 - Small workloads
 - Learning Kubernetes
@@ -274,16 +277,19 @@ This repository currently deploys a **single-node K3s cluster** by default, suit
 To create a highly available cluster with multiple control planes and workers:
 
 **Control Plane (Server Nodes):**
+
 - **Minimum 3 servers** for embedded etcd (odd number required for quorum)
 - Or **2+ servers** with external database (PostgreSQL/MySQL)
 - All servers need pre-shared network access
 - First server initializes cluster, others join via token
 
 **Worker Nodes:**
+
 - Can be added after control plane is ready
 - Join via token from any control plane node
 
 **Steps to convert to HA:**
+
 1. Initialize first control plane with `--cluster-init` flag
 2. Generate join token: `k3s token create`
 3. On additional servers: `curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --token=<token>" sh -`
@@ -342,11 +348,12 @@ Internal service endpoints accessible within the cluster:
 | Loki          | `loki.infra.svc.cluster.local`                    | 3100 | infra     |
 
 **Note:** Loki and OpenTelemetry are complementary:
+
 - **Loki**: Log aggregation and storage
 - **OpenTelemetry**: Traces and metrics collection (can also forward logs to Loki)
 
 Together they provide full observability (logs + metrics + traces).
-| Headlamp      | `headlamp.infra.svc.cluster.local`                | 80   | infra     |
+| Headlamp | `headlamp.infra.svc.cluster.local` | 80 | infra |
 
 ### Connection Examples
 
@@ -505,6 +512,7 @@ kube-score score \
 ### Security Standards Applied
 
 All workloads include:
+
 - **Security Context**: `runAsNonRoot: true`, `runAsUser: 10001`, `runAsGroup: 10001`, `fsGroup: 10001`, `readOnlyRootFilesystem: true`
 - **Image Pull Policy**: `imagePullPolicy: Always`
 - **Resource Limits**: CPU, memory, and ephemeral-storage limits
