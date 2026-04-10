@@ -2,6 +2,32 @@
 
 This repository defines a Kubernetes cluster deployed via ArgoCD using the App-of-Apps pattern. It separates **services** (core infrastructure like databases, caching, message brokers) from **applications** (end-user interfaces and gateways).
 
+## Cluster Architecture
+
+![Cluster Diagram](docs/cluster-diagram.png)
+
+See [docs/cluster-diagram.md](docs/cluster-diagram.md) for the full architecture diagram and service overview.
+
+## Changes
+
+### Recent Updates
+
+- **2026-04-10**: Added cluster config file (`config.yaml`) for centralized configuration
+- **2026-04-10**: Added Keycloak as OIDC provider for K3s auth
+- **2026-04-10**: Added Headlamp dashboard with Keycloak OIDC auth
+- **2026-04-09**: Added run-all.sh script for automated bootstrap
+- **2026-04-09**: Added ArgoCD auto-bootstrap from GitOps repository
+- **2026-04-09**: Added Seq log aggregation service
+- **2026-04-09**: Added OpenTelemetry collector
+- **2026-04-08**: Added Grafana with Prometheus datasource
+- **2026-04-08**: Added Prometheus metrics service
+- **2026-04-08**: Added RabbitMQ message broker
+- **2026-04-08**: Added Keycloak IAM service
+- **2026-04-08**: Added PostgreSQL database
+- **2026-04-08**: Added Redis cache
+
+See `openspec/archive/` for all archived changes.
+
 ## Folder Structure
 
 ```
