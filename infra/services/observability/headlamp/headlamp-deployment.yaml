@@ -17,6 +17,7 @@ spec:
       containers:
         - name: headlamp
           image: ghcr.io/headlamp-k8s/headlamp:{{IMAGE_HEADLAMP}}
+          imagePullPolicy: Always
           args:
             - "-in-cluster"
             - "-plugins-dir=/headlamp/plugins"
@@ -43,6 +44,12 @@ spec:
           ports:
             - containerPort: 4466
               name: http
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            fsGroup: 10001
+            readOnlyRootFilesystem: true
           readinessProbe:
             httpGet:
               scheme: HTTP
@@ -51,9 +58,7 @@ spec:
             initialDelaySeconds: 30
             timeoutSeconds: 30
           livenessProbe:
-            httpGet:
-              scheme: HTTP
-              path: /
+            tcpSocket:
               port: 4466
             initialDelaySeconds: 30
             timeoutSeconds: 30
@@ -61,6 +66,8 @@ spec:
             requests:
               cpu: 100m
               memory: 256Mi
+              ephemeral-storage: 100Mi
             limits:
               cpu: 500m
               memory: 1Gi
+              ephemeral-storage: 500Mi

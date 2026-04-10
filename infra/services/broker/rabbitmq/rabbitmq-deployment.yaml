@@ -16,6 +16,7 @@ spec:
       containers:
         - name: rabbitmq
           image: rabbitmq:{{IMAGE_RABBITMQ}}
+          imagePullPolicy: Always
           ports:
             - containerPort: 5672
               name: amqp
@@ -35,13 +36,21 @@ spec:
           volumeMounts:
             - name: rabbitmq-data
               mountPath: /var/lib/rabbitmq
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            fsGroup: 10001
+            readOnlyRootFilesystem: true
           resources:
             requests:
               cpu: 250m
               memory: 512Mi
+              ephemeral-storage: 100Mi
             limits:
               cpu: 1000m
               memory: 1Gi
+              ephemeral-storage: 500Mi
       volumes:
         - name: rabbitmq-data
           persistentVolumeClaim:

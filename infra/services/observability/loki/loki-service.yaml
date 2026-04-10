@@ -5,6 +5,7 @@ metadata:
   namespace: infra
 spec:
   type: ClusterIP
+  clusterIP: None
   ports:
     - port: 3100
       targetPort: 3100

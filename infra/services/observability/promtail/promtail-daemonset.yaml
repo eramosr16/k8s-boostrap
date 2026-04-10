@@ -16,6 +16,7 @@ spec:
       containers:
         - name: promtail
           image: grafana/promtail:{{IMAGE_PROMTAIL}}
+          imagePullPolicy: Always
           args:
             - -config.file=/etc/promtail/promtail.yaml
           volumeMounts:
@@ -25,13 +26,21 @@ spec:
               mountPath: /var/log
             - name: pod-logs
               mountPath: /var/log/pods
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            fsGroup: 10001
+            readOnlyRootFilesystem: true
           resources:
             requests:
               cpu: 50m
               memory: 50Mi
+              ephemeral-storage: 100Mi
             limits:
               cpu: 100m
               memory: 128Mi
+              ephemeral-storage: 500Mi
       volumes:
         - name: promtail-config
           configMap:

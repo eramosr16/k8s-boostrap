@@ -17,6 +17,7 @@ spec:
       containers:
         - name: loki
           image: grafana/loki:{{IMAGE_LOKI}}
+          imagePullPolicy: Always
           ports:
             - containerPort: 3100
               name: http
@@ -30,13 +31,21 @@ spec:
               readOnly: true
             - name: loki-data
               mountPath: /loki
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            fsGroup: 10001
+            readOnlyRootFilesystem: true
           resources:
             requests:
               cpu: 100m
               memory: 256Mi
+              ephemeral-storage: 100Mi
             limits:
               cpu: 200m
               memory: 512Mi
+              ephemeral-storage: 500Mi
       volumes:
         - name: loki-config
           configMap:

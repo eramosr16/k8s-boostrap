@@ -16,6 +16,7 @@ spec:
       containers:
         - name: prometheus
           image: prom/prometheus:{{IMAGE_PROMETHEUS}}
+          imagePullPolicy: Always
           ports:
             - containerPort: 9090
               name: http
@@ -30,13 +31,21 @@ spec:
               readOnly: true
             - name: prometheus-data
               mountPath: /prometheus
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            fsGroup: 10001
+            readOnlyRootFilesystem: true
           resources:
             requests:
               cpu: 100m
               memory: 512Mi
+              ephemeral-storage: 100Mi
             limits:
               cpu: 500m
               memory: 2Gi
+              ephemeral-storage: 500Mi
       volumes:
         - name: prometheus-config
           configMap:

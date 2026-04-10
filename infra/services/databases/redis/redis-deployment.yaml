@@ -16,6 +16,7 @@ spec:
       containers:
         - name: redis
           image: bitnami/redis:{{IMAGE_REDIS}}
+          imagePullPolicy: Always
           ports:
             - containerPort: 6379
               name: redis
@@ -34,13 +35,21 @@ spec:
             - name: redis-config
               mountPath: /opt/bitnami/redis/etc
               readOnly: true
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            fsGroup: 10001
+            readOnlyRootFilesystem: true
           resources:
             requests:
               cpu: 100m
               memory: 256Mi
+              ephemeral-storage: 100Mi
             limits:
               cpu: 500m
               memory: 1Gi
+              ephemeral-storage: 500Mi
       volumes:
         - name: redis-data
           persistentVolumeClaim:

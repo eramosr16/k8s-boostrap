@@ -16,6 +16,7 @@ spec:
       containers:
         - name: keycloak
           image: bitnami/keycloak:{{IMAGE_KEYCLOAK}}
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
               name: http
@@ -61,17 +62,24 @@ spec:
                 configMapKeyRef:
                   name: keycloak-config
                   key: KC_HOSTNAME_STRICT_HTTPS
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            fsGroup: 10001
+            readOnlyRootFilesystem: true
           resources:
             requests:
               cpu: 500m
               memory: 1Gi
+              ephemeral-storage: 100Mi
             limits:
               cpu: 2000m
               memory: 2Gi
+              ephemeral-storage: 500Mi
           livenessProbe:
-            httpGet:
-              path: /health/ready
-              port: http
+            tcpSocket:
+              port: 8080
             initialDelaySeconds: 60
             periodSeconds: 10
           readinessProbe:

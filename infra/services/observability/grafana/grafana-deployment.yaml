@@ -16,6 +16,7 @@ spec:
       containers:
         - name: grafana
           image: grafana/grafana:{{IMAGE_GRAFANA}}
+          imagePullPolicy: Always
           ports:
             - containerPort: 3000
               name: http
@@ -38,13 +39,21 @@ spec:
                   key: GRAFANA_ADMIN_PASSWORD
             - name: GF_SERVER_ROOT_URL
               value: https://metrics.mydomain.com
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            fsGroup: 10001
+            readOnlyRootFilesystem: true
           resources:
             requests:
               cpu: 100m
               memory: 256Mi
+              ephemeral-storage: 100Mi
             limits:
               cpu: 500m
               memory: 1Gi
+              ephemeral-storage: 500Mi
       volumes:
         - name: grafana-config
           configMap:

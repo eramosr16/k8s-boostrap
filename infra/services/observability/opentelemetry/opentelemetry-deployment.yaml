@@ -20,6 +20,7 @@ spec:
       containers:
         - name: otel-collector
           image: otel/opentelemetry-collector-contrib:{{IMAGE_OPENTELEMETRY}}
+          imagePullPolicy: Always
           command:
             - /otelcol-contrib
             - --config=/etc/otel-collector/otel-config.yaml
@@ -50,21 +51,32 @@ spec:
           volumeMounts:
             - name: otel-config
               mountPath: /etc/otel-collector
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            fsGroup: 10001
+            readOnlyRootFilesystem: true
           resources:
             requests:
               cpu: 100m
               memory: 200Mi
+              ephemeral-storage: 100Mi
             limits:
               cpu: 500m
               memory: 500Mi
+              ephemeral-storage: 500Mi
           livenessProbe:
-            httpGet:
-              path: /
-              port: 13133
+            tcpSocket:
+              port: 4317
+            initialDelaySeconds: 30
+            periodSeconds: 10
           readinessProbe:
             httpGet:
               path: /
               port: 13133
+            initialDelaySeconds: 10
+            periodSeconds: 5
       volumes:
         - name: otel-config
           configMap:

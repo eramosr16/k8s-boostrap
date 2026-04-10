@@ -366,3 +366,40 @@ Create the following groups in the master realm:
 6. Web Origins: `https://argocd.mydomain.com`
 7. Add client scope for groups with Token Mapper (Group Membership)
 8. Create `argocd-admins` group and add admin users
+
+## Kube-Score Validation
+
+All manifests are validated using [kube-score](https://github.com/zegl/kube-score) to ensure security best practices.
+
+### Run Validation
+
+```bash
+# Install kube-score
+go install github.com/zegl/kube-score/cmd/kube-score@latest
+
+# Run against all service manifests
+kube-score score \
+  infra/services/observability/loki/loki-statefulset.yaml \
+  infra/services/observability/promtail/promtail-daemonset.yaml \
+  infra/services/observability/prometheus/prometheus-deployment.yaml \
+  infra/services/observability/grafana/grafana-deployment.yaml \
+  infra/services/observability/opentelemetry/opentelemetry-deployment.yaml \
+  infra/services/observability/headlamp/headlamp-deployment.yaml \
+  infra/services/databases/postgres/postgres-deployment.yaml \
+  infra/services/databases/redis/redis-deployment.yaml \
+  infra/services/broker/rabbitmq/rabbitmq-deployment.yaml \
+  infra/services/iam/keycloak/keycloak-deployment.yaml
+```
+
+### Security Standards Applied
+
+All workloads include:
+- **Security Context**: `runAsNonRoot: true`, `runAsUser: 10001`, `runAsGroup: 10001`, `fsGroup: 10001`, `readOnlyRootFilesystem: true`
+- **Image Pull Policy**: `imagePullPolicy: Always`
+- **Resource Limits**: CPU, memory, and ephemeral-storage limits
+- **Liveness/Readiness Probes**: Different probes for different services
+
+### Known Warnings (Non-Critical)
+
+- **NetworkPolicy**: Not implemented (intentional for single-node K3s)
+- **Loki StatefulSet ServiceName**: kube-score false positive - serviceName is correctly set

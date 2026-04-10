@@ -16,6 +16,7 @@ spec:
       containers:
         - name: hello-world
           image: {{IMAGE_HELLO_WORLD}}
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
               name: http
@@ -32,10 +33,16 @@ spec:
                 secretKeyRef:
                   name: hello-world-secret
                   key: password
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            fsGroup: 1000
           resources:
             requests:
               cpu: 50m
               memory: 64Mi
+              ephemeral-storage: 100Mi
             limits:
               cpu: 200m
               memory: 256Mi
+              ephemeral-storage: 500Mi
