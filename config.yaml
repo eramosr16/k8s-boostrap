@@ -24,7 +24,7 @@ keycloak:
 routes:
   argocd: argocd
   grafana: grafana
-  headlamp: cluster
+  headlamp: infra
   keycloak: auth
   seq: logs
 
