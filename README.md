@@ -12,6 +12,9 @@ See [docs/cluster-diagram.md](docs/cluster-diagram.md) for the full architecture
 
 ### Recent Updates
 
+- **2026-04-10**: Added Keycloak infra realm for service accounts and K3s OIDC auth
+- **2026-04-10**: Replaced Portainer with Headlamp dashboard
+- **2026-04-10**: Fixed kube-score issues (security contexts, image pull policies, resource limits)
 - **2026-04-10**: Added cluster config file (`config.yaml`) for centralized configuration
 - **2026-04-10**: Added Keycloak as OIDC provider for K3s auth
 - **2026-04-10**: Added Headlamp dashboard with Keycloak OIDC auth
