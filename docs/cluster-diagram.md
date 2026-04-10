@@ -1,67 +1,83 @@
 # Cluster Architecture Diagram
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#e3f2fd', 'primaryTextColor': '#1565c0', 'primaryBorderColor': '#1976d2', 'lineColor': '#616161', 'secondaryColor': '#f3e5f5', 'tertiaryColor': '#fff3e0'}}}%%
 flowchart TB
-    subgraph K3s_Cluster["K3s Cluster"]
-        subgraph infra["infra Namespace"]
-            subgraph Databases["Databases"]
-                PostgreSQL["PostgreSQL<br/>:5432"]
-                Redis["Redis<br/>:6379"]
+    subgraph K3s["K3s Cluster"]
+        subgraph infra_ns["infra"]
+            subgraph dbs["Databases"]
+                PG["PostgreSQL<br/>:5432"]
+                RD["Redis<br/>:6379"]
             end
             
-            subgraph Broker["Message Broker"]
-                RabbitMQ["RabbitMQ<br/>:5672<br/>:15672"]
+            subgraph mq["Message Broker"]
+                RMQ["RabbitMQ<br/>:5672"]
             end
             
-            subgraph IAM["Identity & Access"]
-                Keycloak["Keycloak<br/>:8080"]
+            subgraph iam["IAM"]
+                KC["Keycloak<br/>:8080"]
             end
             
-            subgraph Observability["Observability"]
-                Prometheus["Prometheus<br/>:9090"]
-                Grafana["Grafana<br/>:3000"]
-                Seq["Seq<br/>:5341"]
-                OpenTelemetry["OpenTelemetry<br/>:4317"]
-                Headlamp["Headlamp<br/>:80"]
-                ArgoCD["ArgoCD<br/>:443"]
+            subgraph obs["Observability"]
+                PRO["Prometheus<br/>:9090"]
+                GRAF["Grafana<br/>:3000"]
+                SEQ["Seq<br/>:5341"]
+                OTEL["Otel Collector<br/>:4317"]
+                HEAD["Headlamp<br/>:80"]
+                ARGO["ArgoCD<br/>:443"]
             end
             
-            subgraph Gateway["Gateway"]
-                Traefik["Traefik<br/>Ingress Controller"]
-                CertManager["Cert Manager"]
-                ExternalDNS["External DNS"]
+            subgraph gw["Gateway"]
+                TRF["Traefik<br/>Ingress"]
             end
             
-            subgraph Registry["Registry"]
-                ECR["ECR Credential<br/>Provider"]
+            subgraph reg["Registry"]
+                ECR["ECR Provider"]
             end
         end
         
-        subgraph applications["applications Namespace"]
-            HelloWorld["hello-world<br/>:8080"]
+        subgraph apps_ns["applications"]
+            HW["hello-world<br/>:8080"]
         end
     end
     
-    External["External Users"] --> Traefik
-    Traefik --> Keycloak
-    Traefik --> Grafana
-    Traefik --> ArgoCD
-    Traefik --> Seq
-    Traefik --> Headlamp
-    Traefik --> HelloWorld
+    EXT["External<br/>Users"] --> TRF
+    TRF --> KC
+    TRF --> GRAF
+    TRF --> ARGO
+    TRF --> SEQ
+    TRF --> HEAD
+    TRF --> HW
     
-    Keycloak --> PostgreSQL
-    Keycloak --> Redis
+    KC --> PG
+    KC --> RD
     
-    Grafana --> Prometheus
-    Grafana --> PostgreSQL
+    GRAF --> PRO
     
-    OpenTelemetry --> Prometheus
-    OpenTelemetry --> Seq
+    OTEL --> PRO
+    OTEL --> SEQ
     
-    hello-world["hello-world app"] --> PostgreSQL
-    hello-world --> Redis
-    hello-world --> RabbitMQ
+    HW --> PG
+    HW --> RD
+    HW --> RMQ
+    
+    classDef db fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+    classDef broker fill:#fff3e0,stroke:#ef6c00,color:#e65100
+    classDef iam fill:#e1f5fe,stroke:#0277bd,color:#01579b
+    classDef obs fill:#fce4ec,stroke:#c2185b,color:#880e4f
+    classDef gw fill:#f3e5f5,stroke:#7b1fa2,color:#4a148c
+    classDef reg fill:#efebe9,stroke:#5d4037,color:#3e2723
+    classDef app fill:#e0f7fa,stroke:#00838f,color:#006064
+    classDef user fill:#424242,stroke:#212121,color:#ffffff
+    
+    class PG,RD db
+    class RMQ broker
+    class KC iam
+    class PRO,GRAF,SEQ,OTEL,HEAD,ARGO obs
+    class TRF gw
+    class ECR reg
+    class HW app
+    class EXT user
 ```
 
 ## Service Overview
