@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-world
+  namespace: applications
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello-world
+  template:
+    metadata:
+      labels:
+        app: hello-world
+    spec:
+      containers:
+        - name: hello-world
+          image: ${HELLOWORLD_IMAGE}
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: PORT
+              value: "8080"
+            - name: HELLOWORLD_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: hello-world-secret
+                  key: username
+            - name: HELLOWORLD_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: hello-world-secret
+                  key: password
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
