@@ -8,6 +8,24 @@ This repository defines a Kubernetes cluster deployed via ArgoCD using the App-o
 
 See [docs/cluster-diagram.md](docs/cluster-diagram.md) for the full architecture diagram and service overview.
 
+## Agentic Tools
+
+This repository uses two agentic tools for managing changes and implementing features:
+
+### OpenCode
+
+An interactive CLI tool that helps with software engineering tasks. It can read, edit, and create files, run commands, and work with the codebase.
+
+- **GitHub**: https://github.com/anomalyco/opencode
+
+### OpenSpec
+
+A structured change management system that provides artifact-driven workflows for feature development. It tracks proposals, designs, specs, and tasks through a complete change lifecycle.
+
+- **GitHub**: https://github.com/anomalyco/openspec
+
+Changes are stored in `openspec/changes/` and organized in an `archive/` subdirectory when completed.
+
 ## Changes
 
 ### Recent Updates
@@ -322,6 +340,12 @@ Internal service endpoints accessible within the cluster:
 | ArgoCD        | `argocd.infra.svc.cluster.local`                  | 443  | argocd    |
 | OpenTelemetry | `opentelemetry-collector.infra.svc.cluster.local` | 4317 | infra     |
 | Loki          | `loki.infra.svc.cluster.local`                    | 3100 | infra     |
+
+**Note:** Loki and OpenTelemetry are complementary:
+- **Loki**: Log aggregation and storage
+- **OpenTelemetry**: Traces and metrics collection (can also forward logs to Loki)
+
+Together they provide full observability (logs + metrics + traces).
 | Headlamp      | `headlamp.infra.svc.cluster.local`                | 80   | infra     |
 
 ### Connection Examples
