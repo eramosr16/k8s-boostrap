@@ -1,6 +1,68 @@
 #!/bin/bash
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_FILE="${SCRIPT_DIR}/../config.yaml"
+
+get_yaml_value() {
+    local key="$1"
+    local section="$2"
+    local value=""
+
+    if [ -f "$CONFIG_FILE" ]; then
+        local in_section=false
+        while IFS= read -r line; do
+            if [[ "$line" =~ ^${section}: ]]; then
+                in_section=true
+                continue
+            elif [[ "$in_section" && "$line" =~ ^[a-z] ]]; then
+                in_section=false
+            fi
+
+            if [[ "$in_section" && "$line" =~ ^${key}: ]]; then
+                value=$(echo "$line" | sed 's/.*: *//' | tr -d '"')
+                break
+            fi
+        done < "$CONFIG_FILE"
+    fi
+
+    echo "$value"
+}
+
+get_yaml_list() {
+    local key="$1"
+    local section="$2"
+    local result=""
+
+    if [ -f "$CONFIG_FILE" ]; then
+        local in_section=false
+        local in_list=false
+        while IFS= read -r line; do
+            if [[ "$line" =~ ^${section}: ]]; then
+                in_section=true
+                continue
+            elif [[ "$in_section" && "$line" =~ ^[a-z] ]]; then
+                in_section=false
+            fi
+
+            if [[ "$in_section" ]]; then
+                if [[ "$line" =~ ^${key}: ]]; then
+                    in_list=true
+                    local indent=$(echo "$line" | sed 's/[^ ].*//')
+                    continue
+                elif [[ "$in_list" && "$line" =~ ^[[:space:]]*- ]]; then
+                    local item=$(echo "$line" | sed 's/.*- *//' | tr -d '"')
+                    result="${result} ${item}"
+                elif [[ "$in_list" && ! "$line" =~ ^[[:space:]] ]]; then
+                    in_list=false
+                fi
+            fi
+        done < "$CONFIG_FILE"
+    fi
+
+    echo "$result"
+}
+
 echo "=== K3s Bootstrap Script ==="
 
 if command -v k3s &> /dev/null; then
@@ -14,6 +76,36 @@ if command -v k3s &> /dev/null; then
     fi
 else
     echo "K3s not found. Installing K3s..."
+
+    K3S_EXEC_FLAGS=""
+
+    if [ -f "$CONFIG_FILE" ]; then
+        local cluster_domain=$(get_yaml_value "domain" "cluster")
+        if [ -n "$cluster_domain" ]; then
+            K3S_EXEC_FLAGS="${K3S_EXEC_FLAGS} --cluster-domain=${cluster_domain}"
+        fi
+
+        local disable_list=$(get_yaml_list "disable" "k3s")
+        if [ -n "$disable_list" ]; then
+            for item in $disable_list; do
+                K3S_EXEC_FLAGS="${K3S_EXEC_FLAGS} --disable=${item}"
+            done
+        fi
+
+        local server_flags=$(get_yaml_list "serverFlags" "k3s")
+        if [ -n "$server_flags" ]; then
+            for flag in $server_flags; do
+                K3S_EXEC_FLAGS="${K3S_EXEC_FLAGS} ${flag}"
+            done
+        fi
+
+        if [ -n "$K3S_EXEC_FLAGS" ]; then
+            echo "Applying K3s configuration from config.yaml..."
+            echo "K3s exec flags: $K3S_EXEC_FLAGS"
+            export INSTALL_K3S_EXEC="server${K3S_EXEC_FLAGS}"
+        fi
+    fi
+
     curl -sfL https://get.k3s.io | sh -
     echo "K3s installed successfully."
 fi

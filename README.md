@@ -14,7 +14,7 @@ See [docs/cluster-diagram.md](docs/cluster-diagram.md) for the full architecture
 
 - **2026-04-10**: Added Keycloak infra realm for service accounts and K3s OIDC auth
 - **2026-04-10**: Replaced Portainer with Headlamp dashboard
-- **2026-04-10**: Fixed kube-score issues (security contexts, image pull policies, resource limits)
+- **2026-04-10**: Added K3s server configuration options in config.yaml
 - **2026-04-10**: Added cluster config file (`config.yaml`) for centralized configuration
 - **2026-04-10**: Added Keycloak as OIDC provider for K3s auth
 - **2026-04-10**: Added Headlamp dashboard with Keycloak OIDC auth
@@ -188,6 +188,90 @@ If you prefer to set up manually (or need more control), follow these steps:
 - Both scripts are idempotent - safe to run multiple times
 - K3s data is at `/var/lib/rancher/k3s`
 - To uninstall K3s: `curl -sfL https://get.k3s.io | sh -s - --uninstall`
+
+## K3s Server Configuration
+
+K3s can be customized via `config.yaml` before installation. The following options are available:
+
+### Configuration Options
+
+```yaml
+k3s:
+  # Disable embedded components (traefik, servicelb, etc.)
+  disable: []
+  # Additional K3s server flags
+  serverFlags: []
+```
+
+The `cluster.domain` in config.yaml (default: `cluster.local`) is used for both:
+- Kubernetes cluster domain (for service DNS)
+- K3s `--cluster-domain` flag (applied automatically during install)
+
+### Available Disable Options
+
+| Option | Description |
+|--------|-------------|
+| `traefik` | Disable the built-in Traefik ingress controller |
+| `servicelb` | Disable the built-in ServiceLB load balancer |
+| `local-storage` | Disable the built-in local storage driver |
+| `metrics-server` | Disable the built-in metrics server |
+
+### Example: Disable Traefik
+
+```yaml
+k3s:
+  disable:
+    - traefik
+```
+
+### Example: Custom Server Flags
+
+Any K3s server flag can be passed via `serverFlags`. Common examples:
+
+```yaml
+k3s:
+  serverFlags:
+    - "--disable-cloud-controller"
+    - "--kube-controller-manager-arg=bind-address=0.0.0.0"
+    - "--etcd-extra-args=quota-backend-bytes=8589934592"
+```
+
+Common K3s server flags:
+- `--disable-cloud-controller` - Disable Kubernetes cloud controller
+- `--disable-network-policy` - Disable K3s default network policy
+- `--write-kubeconfig-mode` - Set kubeconfig permissions (e.g., "644")
+- `--kube-controller-manager-arg` - Custom kube-controller-manager args
+- `--kube-scheduler-arg` - Custom kube-scheduler args
+- `--etcd-extra-args` - Custom etcd arguments
+
+### Single Node vs HA Cluster
+
+This repository currently deploys a **single-node K3s cluster** by default, suitable for:
+- Development and testing
+- Small workloads
+- Learning Kubernetes
+
+#### What's Required for HA Cluster
+
+To create a highly available cluster with multiple control planes and workers:
+
+**Control Plane (Server Nodes):**
+- **Minimum 3 servers** for embedded etcd (odd number required for quorum)
+- Or **2+ servers** with external database (PostgreSQL/MySQL)
+- All servers need pre-shared network access
+- First server initializes cluster, others join via token
+
+**Worker Nodes:**
+- Can be added after control plane is ready
+- Join via token from any control plane node
+
+**Steps to convert to HA:**
+1. Initialize first control plane with `--cluster-init` flag
+2. Generate join token: `k3s token create`
+3. On additional servers: `curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --token=<token>" sh -`
+4. Add workers: `curl -sfL https://get.k3s.io | K3S_URL=https://<control-plane>:6443 K3S_TOKEN=<token> sh -`
+
+**Note:** This repository's bootstrap scripts don't currently support multi-node deployment. Custom scripts would be needed.
 
 ## Traefik Configuration
 

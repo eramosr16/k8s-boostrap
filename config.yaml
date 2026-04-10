@@ -2,6 +2,10 @@ cluster:
   domain: cluster.local
   region: us-east-1
 
+k3s:
+  disable: []
+  serverFlags: []
+
 traefik:
   email: admin@example.com
 
