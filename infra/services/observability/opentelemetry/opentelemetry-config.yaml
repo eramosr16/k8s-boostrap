@@ -33,7 +33,7 @@ data:
       logging:
         loglevel: debug
       otlphttp:
-        endpoint: http://seq.infra.svc.cluster.local:5341
+        endpoint: http://loki.infra.svc.cluster.local:3100/loki/api/v1/push
 
     extensions:
       health_check:

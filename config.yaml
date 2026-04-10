@@ -13,7 +13,8 @@ images:
   grafana: "10.2.0"
   opentelemetry: "0.102.0"
   headlamp: latest
-  seq: latest
+  loki: "2.9.2"
+  promtail: "2.9.2"
   prometheus: v2.45.0
   ecr_credential_provider: v1.0.0
   hello_world: latest
@@ -26,7 +27,7 @@ routes:
   grafana: grafana
   headlamp: infra
   keycloak: auth
-  seq: logs
+  loki: logs
 
 services:
   namespace: infra

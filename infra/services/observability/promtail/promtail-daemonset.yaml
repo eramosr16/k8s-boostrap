@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: promtail
+  namespace: infra
+spec:
+  selector:
+    matchLabels:
+      app: promtail
+  template:
+    metadata:
+      labels:
+        app: promtail
+    spec:
+      serviceAccountName: promtail
+      containers:
+        - name: promtail
+          image: grafana/promtail:{{IMAGE_PROMTAIL}}
+          args:
+            - -config.file=/etc/promtail/promtail.yaml
+          volumeMounts:
+            - name: promtail-config
+              mountPath: /etc/promtail
+            - name: logs
+              mountPath: /var/log
+            - name: pod-logs
+              mountPath: /var/log/pods
+          resources:
+            requests:
+              cpu: 50m
+              memory: 50Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+      volumes:
+        - name: promtail-config
+          configMap:
+            name: promtail-config
+        - name: logs
+          hostPath:
+            path: /var/log
+        - name: pod-logs
+          hostPath:
+            path: /var/log/pods

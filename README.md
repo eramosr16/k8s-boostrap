@@ -17,7 +17,7 @@ See [docs/cluster-diagram.md](docs/cluster-diagram.md) for the full architecture
 - **2026-04-10**: Added Headlamp dashboard with Keycloak OIDC auth
 - **2026-04-09**: Added run-all.sh script for automated bootstrap
 - **2026-04-09**: Added ArgoCD auto-bootstrap from GitOps repository
-- **2026-04-09**: Added Seq log aggregation service
+- **2026-04-09**: Added Loki log aggregation service
 - **2026-04-09**: Added OpenTelemetry collector
 - **2026-04-08**: Added Grafana with Prometheus datasource
 - **2026-04-08**: Added Prometheus metrics service
@@ -51,7 +51,6 @@ cluster-bootstrap/
     │       ├── prometheus/
     │       ├── grafana/
     │       ├── loki/
-    │       ├── seq/
     │       ├── opentelemetry/
     │       └── headlamp/
     │
@@ -112,9 +111,8 @@ The script will prompt you for credentials (passwords are hidden for security):
 2. **Redis** - Cache password
 3. **RabbitMQ** - Username and password
 4. **Keycloak** - Admin password and database password
-5. **Seq** - Admin password
-6. **Let's Encrypt** - Email for TLS certificates
-7. **AWS** (optional) - Access key and secret for ECR
+5. **Let's Encrypt** - Email for TLS certificates
+6. **AWS** (optional) - Access key and secret for ECR
 
 ### What the Script Does
 
@@ -209,7 +207,8 @@ traefik:
 
 images:
   headlamp: latest
-  seq: latest
+  loki: 2.9.2
+  promtail: 2.9.2
   prometheus: v2.45.0
 ```
 
@@ -235,7 +234,7 @@ Internal service endpoints accessible within the cluster:
 | Keycloak      | `keycloak.infra.svc.cluster.local`                | 8080 | infra     |
 | ArgoCD        | `argocd.infra.svc.cluster.local`                  | 443  | argocd    |
 | OpenTelemetry | `opentelemetry-collector.infra.svc.cluster.local` | 4317 | infra     |
-| Seq           | `seq.infra.svc.cluster.local`                     | 5341 | infra     |
+| Loki          | `loki.infra.svc.cluster.local`                    | 3100 | infra     |
 | Headlamp      | `headlamp.infra.svc.cluster.local`                | 80   | infra     |
 
 ### Connection Examples
@@ -301,7 +300,6 @@ Secrets use environment variable placeholders that are replaced during deploymen
 | Prometheus | -                    | -                                                       |
 | Grafana    | grafana-secret.yaml  | `GRAFANA_OIDC_CLIENT_SECRET`, `GRAFANA_ADMIN_PASSWORD`  |
 | Keycloak   | keycloak-secret.yaml | `KEYCLOAK_ADMIN_PASSWORD`, `KEYCLOAK_DATABASE_PASSWORD` |
-| Seq        | seq-secret.yaml      | `SEQ_ADMIN_PASSWORD`                                    |
 | Headlamp   | -                    | - (uses service account token)                          |
 
 ### Setting Passwords

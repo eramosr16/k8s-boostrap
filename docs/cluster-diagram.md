@@ -21,7 +21,7 @@ flowchart TB
             subgraph obs["Observability"]
                 PRO["Prometheus<br/>:9090"]
                 GRAF["Grafana<br/>:3000"]
-                SEQ["Seq<br/>:5341"]
+                LOKI["Loki<br/>:3100"]
                 OTEL["Otel Collector<br/>:4317"]
                 HEAD["Headlamp<br/>:80"]
                 ARGO["ArgoCD<br/>:443"]
@@ -45,7 +45,7 @@ flowchart TB
     TRF --> KC
     TRF --> GRAF
     TRF --> ARGO
-    TRF --> SEQ
+    TRF --> LOKI
     TRF --> HEAD
     TRF --> HW
     
@@ -55,7 +55,7 @@ flowchart TB
     GRAF --> PRO
     
     OTEL --> PRO
-    OTEL --> SEQ
+    OTEL --> LOKI
     
     HW --> PG
     HW --> RD
@@ -73,7 +73,7 @@ flowchart TB
     class PG,RD db
     class RMQ broker
     class KC iam
-    class PRO,GRAF,SEQ,OTEL,HEAD,ARGO obs
+    class PRO,GRAF,LOKI,OTEL,HEAD,ARGO obs
     class TRF gw
     class ECR reg
     class HW app
@@ -90,7 +90,7 @@ flowchart TB
 | **IAM** | Keycloak | 8080 | ClusterID | Identity provider |
 | **Observability** | Prometheus | 9090 | ClusterIP | Metrics |
 | | Grafana | 3000 | ClusterIP | Visualization |
-| | Seq | 5341 | ClusterIP | Log aggregation |
+| | Loki | 3100 | ClusterIP | Log aggregation |
 | | OpenTelemetry | 4317 | ClusterIP |Tracing |
 | | Headlamp | 80 | ClusterIP | K8s UI |
 | | ArgoCD | 443 | ClusterIP | GitOps |
@@ -103,6 +103,6 @@ flowchart TB
 2. **Broker** (RabbitMQ)
 3. **Gateway** (Traefik)
 4. **IAM** (Keycloak)
-5. **Observability** (Prometheus, Grafana, Seq, OpenTelemetry, Headlamp, ArgoCD)
+5. **Observability** (Prometheus, Grafana, Loki, OpenTelemetry, Headlamp, ArgoCD)
 6. **Registry** (ECR Credential Provider)
 7. **Applications** (hello-world)

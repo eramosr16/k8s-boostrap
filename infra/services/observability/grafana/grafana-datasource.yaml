@@ -20,3 +20,9 @@ data:
         url: http://opentelemetry-collector.infra.svc.cluster.local:8889
         isDefault: false
         editable: false
+      - name: Loki
+        type: loki
+        access: proxy
+        url: http://loki.infra.svc.cluster.local:3100
+        isDefault: false
+        editable: false

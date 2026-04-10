@@ -1,14 +1,14 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: seq
+  name: loki
   namespace: argocd
 spec:
   project: default
   source:
     repoURL: https://github.com/ernesto/k8s-boostrap.git
     targetRevision: HEAD
-    path: infra/services/observability/seq
+    path: infra/services/observability/loki
   destination:
     server: https://kubernetes.default.svc
     namespace: infra

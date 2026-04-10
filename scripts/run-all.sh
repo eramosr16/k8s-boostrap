@@ -14,7 +14,6 @@ ROUTE_ARGOCD="argocd"
 ROUTE_GRAFANA="grafana"
 ROUTE_HEADLAMP="headlamp"
 ROUTE_KEYCLOAK="keycloak"
-ROUTE_SEQ="logs"
 
 load_cluster_config() {
     if [ -f "$CONFIG_FILE" ]; then
@@ -55,16 +54,10 @@ with open('$CONFIG_FILE') as f:
     d = yaml.safe_load(f)
     print(d.get('routes', {}).get('keycloak', 'keycloak'))
 " 2>/dev/null) || ROUTE_KEYCLOAK="keycloak"
-            ROUTE_SEQ=$(python3 -c "
-import yaml
-with open('$CONFIG_FILE') as f:
-    d = yaml.safe_load(f)
-    print(d.get('routes', {}).get('seq', 'logs'))
-" 2>/dev/null) || ROUTE_SEQ="logs"
         fi
     fi
     export CLUSTER_DOMAIN KEYCLOAK_REALM
-    export ROUTE_ARGOCD ROUTE_GRAFANA ROUTE_HEADLAMP ROUTE_KEYCLOAK ROUTE_SEQ
+    export ROUTE_ARGOCD ROUTE_GRAFANA ROUTE_HEADLAMP ROUTE_KEYCLOAK
 }
 
 load_cluster_config
@@ -145,7 +138,7 @@ create_keycloak_infra_realm() {
     local grafana_uri="https://${ROUTE_GRAFANA}.${CLUSTER_DOMAIN}"
     local argocd_uri="https://${ROUTE_ARGOCD}.${CLUSTER_DOMAIN}"
     local headlamp_uri="https://${ROUTE_HEADLAMP}.${CLUSTER_DOMAIN}"
-    local seq_uri="https://${ROUTE_SEQ}.${CLUSTER_DOMAIN}"
+    local headlamp_uri="https://${ROUTE_HEADLAMP}.${CLUSTER_DOMAIN}"
     
     kubectl exec -n infra "$keycloak_pod" -- bash -c "
         export KEYCLOAK_HOME='/opt/keycloak'
@@ -165,9 +158,6 @@ create_keycloak_infra_realm() {
         
         echo 'Creating Headlamp client...'
         kcadm create clients -r '\$REALM' -s clientId=\$REALM-headlamp -s enabled=true -s protocol=openid-connect -s publicClient=false -s standardFlowEnabled=true -s 'redirectUris=[\"http://localhost:4466/*\",\"http://headlamp.infra.svc.cluster.local/*\"]' -s webOrigins='[\"+\"]' -s serviceAccountsEnabled=true || true
-        
-        echo 'Creating Seq client...'
-        kcadm create clients -r '\$REALM' -s clientId=\$REALM-seq -s enabled=true -s protocol=openid-connect -s publicClient=false -s standardFlowEnabled=true -s 'redirectUris=[\"http://localhost:5341/*\",\"http://seq.infra.svc.cluster.local:5341/*\"]' -s webOrigins='[\"+\"]' -s serviceAccountsEnabled=true || true
         
         echo \"\$REALM clients created\"
     "
@@ -284,14 +274,13 @@ prompt_secrets() {
     RABBITMQ_PASS=$(prompt_secret "RabbitMQ Password" "RABBITMQ_DEFAULT_PASS" "Enter RabbitMQ password")
     KEYCLOAK_ADMIN_PASSWORD=$(prompt_secret "Keycloak Admin Password" "KEYCLOAK_ADMIN_PASSWORD" "Enter Keycloak admin password")
     KEYCLOAK_DB_PASSWORD=$(prompt_secret "Keycloak Database Password" "KEYCLOAK_DATABASE_PASSWORD" "Enter Keycloak database password")
-    SEQ_ADMIN_PASSWORD=$(prompt_secret "Seq Admin Password" "SEQ_ADMIN_PASSWORD" "Enter Seq admin password")
     LETS_ENCRYPT_EMAIL=$(prompt_secret "Let's Encrypt Email" "LETS_ENCRYPT_EMAIL" "Enter Let's Encrypt email for Traefik ACME")
     AWS_ACCESS_KEY_ID=$(prompt_secret "AWS Access Key ID" "AWS_ACCESS_KEY_ID" "Enter AWS access key (or press Enter to skip)" "true")
     AWS_SECRET_ACCESS_KEY=$(prompt_secret "AWS Secret Access Key" "AWS_SECRET_ACCESS_KEY" "Enter AWS secret key (or press Enter to skip)" "true")
     
     export POSTGRES_PASSWORD REDIS_PASSWORD RABBITMQ_USER RABBITMQ_PASS
     export KEYCLOAK_ADMIN_PASSWORD KEYCLOAK_DB_PASSWORD
-    export SEQ_ADMIN_PASSWORD LETS_ENCRYPT_EMAIL
+    export LETS_ENCRYPT_EMAIL
     export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
     
     log_info "Credentials collected."
@@ -318,10 +307,6 @@ create_secrets() {
     kubectl create secret generic keycloak-secret -n infra \
         --from-literal=admin-password="$KEYCLOAK_ADMIN_PASSWORD" \
         --from-literal=database-password="$KEYCLOAK_DB_PASSWORD" \
-        --dry-run=client -o yaml | kubectl apply -f -
-    
-    kubectl create secret generic seq-secret -n infra \
-        --from-literal=admin-password="$SEQ_ADMIN_PASSWORD" \
         --dry-run=client -o yaml | kubectl apply -f -
     
     kubectl create secret generic traefik-acme-secret -n infra \
