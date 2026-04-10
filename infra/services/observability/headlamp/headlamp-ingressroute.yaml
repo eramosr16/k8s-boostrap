@@ -1,19 +1,19 @@
 apiVersion: traefik.containo.us/v1alpha1
 kind: IngressRoute
 metadata:
-  name: portainer
+  name: headlamp
   namespace: infra
 spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`portainer.mydomain.com`)
+    - match: Host(`headlamp.mydomain.com`)
       kind: Rule
       middlewares:
         - name: security-headers
           namespace: kube-system
       services:
-        - name: portainer
-          port: 9000
+        - name: headlamp
+          port: 80
   tls:
     certResolver: le

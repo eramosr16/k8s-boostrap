@@ -27,7 +27,7 @@ cluster-bootstrap/
     │       ├── loki/
     │       ├── seq/
     │       ├── opentelemetry/
-    │       └── portainer/
+    │       └── headlamp/
     │
     └── applications/           # End-user applications
 ```
@@ -87,9 +87,8 @@ The script will prompt you for credentials (passwords are hidden for security):
 3. **RabbitMQ** - Username and password
 4. **Keycloak** - Admin password and database password
 5. **Seq** - Admin password
-6. **Portainer** - Admin password
-7. **Let's Encrypt** - Email for TLS certificates
-8. **AWS** (optional) - Access key and secret for ECR
+6. **Let's Encrypt** - Email for TLS certificates
+7. **AWS** (optional) - Access key and secret for ECR
 
 ### What the Script Does
 
@@ -114,9 +113,9 @@ kubectl port-forward svc/argocd-server -n argocd 8080:443
 kubectl port-forward svc/keycloak -n infra 8080:8080
 # Open http://localhost:8080 - Username: admin
 
-# Portainer
-kubectl port-forward svc/portainer -n infra 9000:9000
-# Open http://localhost:9000 - Username: admin
+# Headlamp
+kubectl port-forward svc/headlamp -n infra 4466:80
+# Open http://localhost:4466 - Use service account token
 
 # Grafana
 kubectl port-forward svc/grafana -n infra 3000:3000
@@ -200,7 +199,7 @@ Internal service endpoints accessible within the cluster:
 | ArgoCD        | `argocd.infra.svc.cluster.local`                  | 443  | argocd    |
 | OpenTelemetry | `opentelemetry-collector.infra.svc.cluster.local` | 4317 | infra     |
 | Seq           | `seq.infra.svc.cluster.local`                     | 5341 | infra     |
-| Portainer     | `portainer.infra.svc.cluster.local`               | 9000 | infra     |
+| Headlamp      | `headlamp.infra.svc.cluster.local`                | 80   | infra     |
 
 ### Connection Examples
 
@@ -266,7 +265,6 @@ Secrets use environment variable placeholders that are replaced during deploymen
 | Grafana    | grafana-secret.yaml  | `GRAFANA_OIDC_CLIENT_SECRET`, `GRAFANA_ADMIN_PASSWORD`  |
 | Keycloak   | keycloak-secret.yaml | `KEYCLOAK_ADMIN_PASSWORD`, `KEYCLOAK_DATABASE_PASSWORD` |
 | Seq        | seq-secret.yaml      | `SEQ_ADMIN_PASSWORD`                                    |
-| Portainer  | portainer-secret.yaml | `PORTAINER_ADMIN_PASSWORD`                              |
 
 ### Setting Passwords
 
@@ -298,7 +296,7 @@ Then update the secret file with the actual password or use a tool like `envsubs
 
 Before deploying services, ensure the following are configured:
 
-- [ ] **DNS**: `auth.mydomain.com`, `argocd.mydomain.com`, `metrics.mydomain.com`, `logs.mydomain.com`, and `portainer.mydomain.com` point to your cluster's external IP
+- [ ] **DNS**: `auth.mydomain.com`, `argocd.mydomain.com`, `metrics.mydomain.com`, `logs.mydomain.com`, and `headlamp.mydomain.com` point to your cluster's external IP
 - [ ] **Let's Encrypt**: Email configured in `traefik-acme-secret.yaml`
 - [ ] **Secrets**: All passwords set in respective secret files
 - [ ] **Keycloak Client**: Grafana and ArgoCD OIDC clients configured in Keycloak master realm
