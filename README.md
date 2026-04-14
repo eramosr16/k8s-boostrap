@@ -30,6 +30,7 @@ Changes are stored in `openspec/changes/` and organized in an `archive/` subdire
 
 ### Recent Updates
 
+- **2026-04-14**: Added CoreDNS alias tracking for `auth.<domain>` so Keycloak tokens resolve internally.
 - **2026-04-10**: Added Keycloak infra realm for service accounts and K3s OIDC auth
 - **2026-04-10**: Replaced Portainer with Headlamp dashboard
 - **2026-04-10**: Added K3s server configuration options in config.yaml
@@ -330,6 +331,14 @@ The `run-all.sh` script will automatically use these values when deploying.
 - `redirect-http-to-https` - Redirects HTTP to HTTPS
 - `security-headers` - Adds security headers (X-Frame-Options, X-Content-Type-Options, etc.)
 - `rate-limit` - Rate limiting (100 req/s average, 50 burst)
+### Keycloak auth alias
+
+Services validate tokens faster when `auth.<cluster-domain>` resolves to the internal Keycloak IP. Set `cluster.hostIP` in `config.yaml` to match the Keycloak service ClusterIP (`kubectl get svc keycloak -n infra -o jsonpath='{.spec.clusterIP}'`).
+
+- The bootstrap script (`scripts/run-all.sh`) reads this value, writes `<cluster.hostIP> auth.<cluster-domain>` into `/etc/coredns/NodeHosts`, and restarts CoreDNS to apply the alias.
+- `infra/services/registry/coredns-config.yaml` seeds the GitOps-managed CoreDNS `ConfigMap` with the same entry. Update that file whenever `cluster.hostIP` changes so the git repo and runtime are in sync.
+
+If you change `cluster.domain`, update the alias entry in `infra/services/registry/coredns-config.yaml` and rerun the bootstrap script so `/etc/coredns/NodeHosts` reflects the new hostname.
 
 ## Service Connection Details
 

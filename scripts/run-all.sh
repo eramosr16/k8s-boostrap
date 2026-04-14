@@ -14,6 +14,7 @@ ROUTE_ARGOCD="argocd"
 ROUTE_GRAFANA="grafana"
 ROUTE_HEADLAMP="headlamp"
 ROUTE_KEYCLOAK="keycloak"
+KEYCLOAK_HOST_IP=""
 
 load_cluster_config() {
     if [ -f "$CONFIG_FILE" ]; then
@@ -54,10 +55,17 @@ with open('$CONFIG_FILE') as f:
     d = yaml.safe_load(f)
     print(d.get('routes', {}).get('keycloak', 'keycloak'))
 " 2>/dev/null) || ROUTE_KEYCLOAK="keycloak"
+            KEYCLOAK_HOST_IP=$(python3 -c "
+import yaml
+with open('$CONFIG_FILE') as f:
+    d = yaml.safe_load(f)
+    print(d.get('cluster', {}).get('hostIP', ''))
+" 2>/dev/null) || KEYCLOAK_HOST_IP=""
         fi
     fi
     export CLUSTER_DOMAIN KEYCLOAK_REALM
     export ROUTE_ARGOCD ROUTE_GRAFANA ROUTE_HEADLAMP ROUTE_KEYCLOAK
+    export KEYCLOAK_HOST_IP
 }
 
 load_cluster_config
@@ -517,6 +525,37 @@ configure_keycloak_clients() {
     fi
     
     log_info "Keycloak clients configured."
+    ensure_keycloak_dns_alias
+}
+
+ensure_keycloak_dns_alias() {
+    local alias_domain="auth.${CLUSTER_DOMAIN:-cluster.local}"
+    local alias_line="$KEYCLOAK_HOST_IP $alias_domain"
+    local nodehosts="/etc/coredns/NodeHosts"
+
+    if [ -z "$KEYCLOAK_HOST_IP" ]; then
+        log_error "cluster.hostIP is not configured in $CONFIG_FILE. Set the alias IP before touching CoreDNS hosts."
+        exit 1
+    fi
+
+    if [ ! -f "$nodehosts" ]; then
+        log_warn "$nodehosts not found; creating placeholder file."
+        sudo touch "$nodehosts" || true
+    fi
+
+    if sudo grep -Fxq "$alias_line" "$nodehosts" 2>/dev/null; then
+        log_info "Keycloak auth alias already present in $nodehosts."
+    else
+        log_info "Adding Keycloak auth alias to $nodehosts."
+        echo "$alias_line" | sudo tee -a "$nodehosts" >/dev/null
+    fi
+
+    log_info "Restarting CoreDNS so it picks up the alias."
+    if kubectl -n kube-system rollout restart deployment/coredns >/dev/null 2>&1; then
+        log_info "CoreDNS restart triggered."
+    else
+        log_warn "CoreDNS restart failed; check kubeconfig/permissions."
+    fi
 }
 
 prompt_grafana_password() {
