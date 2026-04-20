@@ -1,0 +1,32 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: nuclio-operator
+  namespace: nuclio
+rules:
+  - apiGroups: ["nuclio.io"]
+    resources: ["functions", "functionevents", "projects"]
+    verbs: ["*"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["*"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets"]
+    verbs: ["*"]
+  - apiGroups: [""]
+    resources: ["services", "pods", "secrets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: nuclio-operator-binding
+  namespace: nuclio
+subjects:
+  - kind: ServiceAccount
+    name: nuclio
+    namespace: nuclio
+roleRef:
+  kind: Role
+  name: nuclio-operator
+  apiGroup: rbac.authorization.k8s.io

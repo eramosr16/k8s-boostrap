@@ -1,0 +1,28 @@
+controller:
+  image:
+    tag: latest
+  namespace: nuclio
+
+dashboard:
+  image:
+    tag: latest
+  baseImagePullPolicy: IfNotPresent
+  containerBuilderKind: kaniko
+  kaniko:
+    cacheRepo: ""
+
+registry:
+  pushPullUrl: ""
+  secretName: ""
+  defaultBaseRegistryURL: quay.io
+  defaultOnbuildRegistryURL: quay.io
+
+externalLB:
+  enabled: true
+
+rbac:
+  crdAccessMode: all
+
+serviceAccount:
+  create: true
+  name: nuclio

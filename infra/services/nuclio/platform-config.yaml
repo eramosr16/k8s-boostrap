@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: platform-config
+  namespace: nuclio
+data:
+  platform.yaml: |
+    logger:
+      sinks:
+        stdoutLogger:
+          kind: stdout
+      system:
+      - level: debug
+        sink: stdoutLogger
+      functions:
+      - level: debug
+        sink: stdoutLogger
+    metrics:
+      sinks:
+        promPull:
+          kind: prometheusPull
+          url: :8090
+          attributes:
+            jobName: nuclio
+            instanceName: nuclio
+      system:
+      - promPull
+      functions:
+      - promPull
+    healthCheck:
+      enabled: true
+      listenAddress: :8082
+    webAdmin:
+      enabled: true
+      listenAddress: :8081
+    cronTriggerCreationMode: "processor"

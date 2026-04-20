@@ -24,6 +24,7 @@ images:
   prometheus: v2.45.0
   ecr_credential_provider: v1.0.0
   hello_world: latest
+  nuclio: latest
 
 keycloak:
   realm: infra
@@ -34,6 +35,16 @@ routes:
   headlamp: infra
   keycloak: auth
   loki: logs
+  nuclio: nuclio
 
 services:
   namespace: infra
+
+nuclio:
+  helm:
+    repo: https://nuclio.github.io/nuclio/charts
+  registry:
+    # ECR registry URL for function images (e.g., ACCOUNT.dkr.ecr.REGION.amazonaws.com)
+    ecr: ""
+  rabbitmq:
+    url: "amqp://rabbitmq.infra.svc.cluster.local:5672"

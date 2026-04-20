@@ -1,0 +1,10 @@
+apiVersion: nuclio.io/v1alpha1
+kind: Function
+metadata:
+  name: hello-world
+  namespace: default
+spec:
+  runtime: dotnetcore
+  handler: nuclio:main
+  image: hello-world:latest
+  version: latest

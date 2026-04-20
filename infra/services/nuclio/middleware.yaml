@@ -1,0 +1,10 @@
+apiVersion: traefik.containo.io/v1alpha1
+kind: Middleware
+metadata:
+  name: nuclio-oauth
+  namespace: nuclio
+spec:
+  forwardAuth:
+    address: http://traefik-forward-auth.traefik.svc.cluster.local:4181/oauth/validate
+    trustForwardHeader: true
+    authResponseHeaders:
