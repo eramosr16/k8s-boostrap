@@ -56,41 +56,11 @@ with open('$CONFIG_FILE') as f:
     print(d.get('routes', {}).get('keycloak', 'keycloak'))
 " 2>/dev/null) || ROUTE_KEYCLOAK="keycloak"
             KEYCLOAK_HOST_IP=$(python3 -c "
-import yaml
-with open('$CONFIG_FILE') as f:
-    d = yaml.safe_load(f)
-    print(d.get('cluster', {}).get('hostIP', ''))
-" 2>/dev/null) || KEYCLOAK_HOST_IP=""
-            ROUTE_NUCLIO=$(python3 -c "
-import yaml
-with open('$CONFIG_FILE') as f:
-    d = yaml.safe_load(f)
-    print(d.get('routes', {}).get('nuclio', 'nuclio'))
-" 2>/dev/null) || ROUTE_NUCLIO="nuclio"
-            NUCLIO_HELM_REPO=$(python3 -c "
-import yaml
-with open('$CONFIG_FILE') as f:
-    d = yaml.safe_load(f)
-    print(d.get('nuclio', {}).get('helm', {}).get('repo', ''))
-" 2>/dev/null) || NUCLIO_HELM_REPO=""
-            NUCLIO_ECR=$(python3 -c "
-import yaml
-with open('$CONFIG_FILE') as f:
-    d = yaml.safe_load(f)
-    print(d.get('nuclio', {}).get('registry', {}).get('ecr', ''))
-" 2>/dev/null) || NUCLIO_ECR=""
-            NUCLIO_RABBITMQ_URL=$(python3 -c "
-import yaml
-with open('$CONFIG_FILE') as f:
-    d = yaml.safe_load(f)
-    print(d.get('nuclio', {}).get('rabbitmq', {}).get('url', ''))
-" 2>/dev/null) || NUCLIO_RABBITMQ_URL=""
         fi
     fi
     export CLUSTER_DOMAIN KEYCLOAK_REALM
-    export ROUTE_ARGOCD ROUTE_GRAFANA ROUTE_HEADLAMP ROUTE_KEYCLOAK ROUTE_NUCLIO
+    export ROUTE_ARGOCD ROUTE_GRAFANA ROUTE_HEADLAMP ROUTE_KEYCLOAK
     export KEYCLOAK_HOST_IP
-    export NUCLIO_HELM_REPO NUCLIO_ECR NUCLIO_RABBITMQ_URL
 }
 
 load_cluster_config
@@ -294,39 +264,6 @@ install_argocd() {
     kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=argocd-server -n argocd --timeout=300s
 
     log_info "ArgoCD installed successfully."
-}
-
-install_nuclio() {
-    log_info "Installing Nuclio..."
-
-    if ! kubectl get namespace nuclio &> /dev/null; then
-        kubectl create namespace nuclio
-    fi
-
-    if [ -n "$NUCLIO_HELM_REPO" ]; then
-        helm repo add nuclio "$NUCLIO_HELM_REPO" 2>/dev/null || true
-        helm repo update nuclio 2>/dev/null || true
-    else
-        helm repo add nuclio https://nuclio.github.io/nuclio/charts 2>/dev/null || true
-        helm repo update nuclio 2>/dev/null || true
-    fi
-
-    local nuclio_values="${REPO_ROOT}/infra/services/nuclio/values.yaml"
-    if [ -f "$nuclio_values" ]; then
-        helm upgrade --install nuclio nuclio/nuclio \
-            --namespace nuclio \
-            --values "$nuclio_values" \
-            --create-namespace \
-            --wait \
-            --timeout 300s
-
-        log_info "Waiting for Nuclio to be ready..."
-        kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=nuclio -n nuclio --timeout=300s || true
-    else
-        log_warn "Nuclio values file not found at $nuclio_values"
-    fi
-
-    log_info "Nuclio installed successfully."
 }
 
 prompt_secrets() {
@@ -686,9 +623,6 @@ main() {
     echo
     
     configure_keycloak_clients
-    echo
-
-    install_nuclio
     echo
 
     if poll_applications; then
