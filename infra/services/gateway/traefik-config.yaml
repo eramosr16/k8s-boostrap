@@ -12,7 +12,7 @@ data:
       letsencrypt:
         acme:
           email: "{{TRAEFIK_EMAIL}}"
-          storage: /letsencrypt/acme.json
+          storage: /data/acme.json
           httpChallenge:
             entryPoint: web
         # For production, remove the staging URL below
