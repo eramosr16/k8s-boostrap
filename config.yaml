@@ -12,10 +12,10 @@ traefik:
   email: admin@example.com
 
 images:
-  keycloak: "24"
-  postgres: "16"
-  redis: "7"
-  rabbitmq: "3-management"
+  keycloak: "26"
+  postgres: "18"
+  redis: "8"
+  rabbitmq: "4-management-alpine"
   grafana: "10.2.0"
   opentelemetry: "0.102.0"
   headlamp: latest
@@ -24,7 +24,6 @@ images:
   prometheus: v2.45.0
   ecr_credential_provider: v1.0.0
   hello_world: latest
-  
 
 keycloak:
   realm: infra
