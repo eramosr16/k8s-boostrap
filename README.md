@@ -30,6 +30,7 @@ Changes are stored in `openspec/changes/` and organized in an `archive/` subdire
 
 ### Recent Updates
 
+- **2026-04-27**: Removed the unused `hello-world` application from `infra/applications/` (change: `remove-hello-world-app`).
 - **2026-04-14**: Added CoreDNS alias tracking for `auth.<domain>` so Keycloak tokens resolve internally.
 - **2026-04-10**: Added Keycloak infra realm for service accounts and K3s OIDC auth
 - **2026-04-10**: Replaced Portainer with Headlamp dashboard

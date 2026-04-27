@@ -1,3 +1,0 @@
-/home/ernesto/Repository/k8s-boostrap/infra/applications/hello-world/obj/Debug/net9.0/handler.GeneratedMSBuildEditorConfig.editorconfig
-/home/ernesto/Repository/k8s-boostrap/infra/applications/hello-world/obj/Debug/net9.0/handler.csproj.CoreCompileInputs.cache
-/home/ernesto/Repository/k8s-boostrap/infra/applications/hello-world/obj/Debug/net9.0/handler.sourcelink.json
