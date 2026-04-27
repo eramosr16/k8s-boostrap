@@ -245,9 +245,11 @@ prompt_secret() {
         return 0
     fi
 
+    log_warn "Environment variable '$var_name' is not set; prompting for '$name'."
+    local prompt_message="$description [$var_name]: "
+
     while true; do
-        printf "%s [%s]: " "$description" "$var_name"
-        if ! read -s value; then
+        if ! read -s -r -p "$prompt_message" value; then
             log_error "Failed to read $name"
             return 1
         fi
@@ -322,26 +324,33 @@ install_argocd() {
     log_info "ArgoCD installed successfully."
 }
 
+readonly CREDENTIAL_PROMPTS=(
+    "PostgreSQL Password|POSTGRES_PASSWORD|Enter PostgreSQL password|false"
+    "Redis Password|REDIS_PASSWORD|Enter Redis password|false"
+    "RabbitMQ Username|RABBITMQ_DEFAULT_USER|Enter RabbitMQ username|false"
+    "RabbitMQ Password|RABBITMQ_DEFAULT_PASS|Enter RabbitMQ password|false"
+    "Keycloak Admin Password|KEYCLOAK_ADMIN_PASSWORD|Enter Keycloak admin password|false"
+    "Keycloak Database Password|KEYCLOAK_DATABASE_PASSWORD|Enter Keycloak database password|false"
+    "Let's Encrypt Email|LETS_ENCRYPT_EMAIL|Enter Let's Encrypt email for Traefik ACME|false"
+    "AWS Access Key ID|AWS_ACCESS_KEY_ID|Enter AWS access key (or press Enter to skip)|true"
+    "AWS Secret Access Key|AWS_SECRET_ACCESS_KEY|Enter AWS secret key (or press Enter to skip)|true"
+)
+
 prompt_secrets() {
     log_info "=== Credential Setup ==="
     log_info "Please enter credentials for all services."
     echo
-    
-    POSTGRES_PASSWORD=$(prompt_secret "PostgreSQL Password" "POSTGRES_PASSWORD" "Enter PostgreSQL password")
-    REDIS_PASSWORD=$(prompt_secret "Redis Password" "REDIS_PASSWORD" "Enter Redis password")
-    RABBITMQ_USER=$(prompt_secret "RabbitMQ User" "RABBITMQ_DEFAULT_USER" "Enter RabbitMQ username")
-    RABBITMQ_PASS=$(prompt_secret "RabbitMQ Password" "RABBITMQ_DEFAULT_PASS" "Enter RabbitMQ password")
-    KEYCLOAK_ADMIN_PASSWORD=$(prompt_secret "Keycloak Admin Password" "KEYCLOAK_ADMIN_PASSWORD" "Enter Keycloak admin password")
-    KEYCLOAK_DB_PASSWORD=$(prompt_secret "Keycloak Database Password" "KEYCLOAK_DATABASE_PASSWORD" "Enter Keycloak database password")
-    LETS_ENCRYPT_EMAIL=$(prompt_secret "Let's Encrypt Email" "LETS_ENCRYPT_EMAIL" "Enter Let's Encrypt email for Traefik ACME")
-    AWS_ACCESS_KEY_ID=$(prompt_secret "AWS Access Key ID" "AWS_ACCESS_KEY_ID" "Enter AWS access key (or press Enter to skip)" "true")
-    AWS_SECRET_ACCESS_KEY=$(prompt_secret "AWS Secret Access Key" "AWS_SECRET_ACCESS_KEY" "Enter AWS secret key (or press Enter to skip)" "true")
-    
-    export POSTGRES_PASSWORD REDIS_PASSWORD RABBITMQ_USER RABBITMQ_PASS
-    export KEYCLOAK_ADMIN_PASSWORD KEYCLOAK_DB_PASSWORD
-    export LETS_ENCRYPT_EMAIL
-    export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
-    
+    local definition
+    for definition in "${CREDENTIAL_PROMPTS[@]}"; do
+        IFS='|' read -r name env_var prompt allow_empty <<< "$definition"
+        allow_empty=${allow_empty:-false}
+        local value
+        if ! value=$(prompt_secret "$name" "$env_var" "$prompt" "$allow_empty"); then
+            exit 1
+        fi
+        export "$env_var=$value"
+    done
+
     log_info "Credentials collected."
 }
 
@@ -359,13 +368,13 @@ create_secrets() {
         --dry-run=client -o yaml | kubectl apply -f -
     
     kubectl create secret generic rabbitmq-secret -n infra \
-        --from-literal=username="$RABBITMQ_USER" \
-        --from-literal=password="$RABBITMQ_PASS" \
+        --from-literal=RABBITMQ_DEFAULT_USER="$RABBITMQ_DEFAULT_USER" \
+        --from-literal=RABBITMQ_DEFAULT_PASS="$RABBITMQ_DEFAULT_PASS" \
         --dry-run=client -o yaml | kubectl apply -f -
-    
+
     kubectl create secret generic keycloak-secret -n infra \
-        --from-literal=admin-password="$KEYCLOAK_ADMIN_PASSWORD" \
-        --from-literal=database-password="$KEYCLOAK_DB_PASSWORD" \
+        --from-literal=KEYCLOAK_ADMIN_PASSWORD="$KEYCLOAK_ADMIN_PASSWORD" \
+        --from-literal=KEYCLOAK_DATABASE_PASSWORD="$KEYCLOAK_DATABASE_PASSWORD" \
         --dry-run=client -o yaml | kubectl apply -f -
     
     kubectl create secret generic traefik-acme-secret -n infra \

@@ -31,6 +31,7 @@ Changes are stored in `openspec/changes/` and organized in an `archive/` subdire
 ### Recent Updates
 
 - **2026-04-27**: Removed the unused `hello-world` application from `infra/applications/` (change: `remove-hello-world-app`).
+- **2026-04-27**: Updated `scripts/run-all.sh` so credential prompts remain the single source of truth, keeping exports aligned and never sourcing secrets from `config.yaml` (change: `validate-credentials-against-config`).
 - **2026-04-14**: Added CoreDNS alias tracking for `auth.<domain>` so Keycloak tokens resolve internally.
 - **2026-04-10**: Added Keycloak infra realm for service accounts and K3s OIDC auth
 - **2026-04-10**: Replaced Portainer with Headlamp dashboard
@@ -429,6 +430,8 @@ Secrets use environment variable placeholders that are replaced during deploymen
 | Grafana    | grafana-secret.yaml  | `GRAFANA_OIDC_CLIENT_SECRET`, `GRAFANA_ADMIN_PASSWORD`  |
 | Keycloak   | keycloak-secret.yaml | `KEYCLOAK_ADMIN_PASSWORD`, `KEYCLOAK_DATABASE_PASSWORD` |
 | Headlamp   | -                    | - (uses service account token)                          |
+
+`scripts/run-all.sh` collects these secrets interactively via `prompt_secrets()` and expects you to type them or export them before running the script. Do not store these credentials in `config.yaml` to avoid leaking secrets into the repository history.
 
 ### Setting Passwords
 
