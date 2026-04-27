@@ -15,6 +15,7 @@ ROUTE_GRAFANA="grafana"
 ROUTE_HEADLAMP="headlamp"
 ROUTE_KEYCLOAK="keycloak"
 KEYCLOAK_HOST_IP=""
+ARGOCD_CLI_VERSION="v2.9.11"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -199,7 +200,7 @@ create_keycloak_infra_realm() {
         kcadm create clients -r '\$REALM' -s clientId=\$REALM-grafana -s enabled=true -s protocol=openid-connect -s publicClient=false -s standardFlowEnabled=true -s 'redirectUris=[\"http://localhost:3000/*\",\"http://grafana.infra.svc.cluster.local:3000/*\"]' -s webOrigins='[\"+\"]' -s serviceAccountsEnabled=true || true
         
         echo 'Creating ArgoCD client...'
-        kcadm create clients -r '\$REALM' -s clientId=\$REALM-argocd -s enabled=true -s protocol=openid-connect -s publicClient=false -s standardFlowEnabled=true -s 'redirectUris=[\"http://localhost:8080/*\",\"http://argocd.infra.svc.cluster.local/*\"]' -s webOrigins='[\"+\"]' -s serviceAccountsEnabled=true || true
+        kcadm create clients -r '\$REALM' -s clientId=\$REALM-argocd -s enabled=true -s protocol=openid-connect -s publicClient=false -s standardFlowEnabled=true -s 'redirectUris=[\"http://localhost:8080/*\",\"http://argocd-server.argocd.svc.cluster.local:8080/*\"]' -s webOrigins='[\"+\"]' -s serviceAccountsEnabled=true || true
         
         echo 'Creating Headlamp client...'
         kcadm create clients -r '\$REALM' -s clientId=\$REALM-headlamp -s enabled=true -s protocol=openid-connect -s publicClient=false -s standardFlowEnabled=true -s 'redirectUris=[\"http://localhost:4466/*\",\"http://headlamp.infra.svc.cluster.local/*\"]' -s webOrigins='[\"+\"]' -s serviceAccountsEnabled=true || true
@@ -322,6 +323,53 @@ install_argocd() {
     kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=argocd-server -n argocd --timeout=300s
 
     log_info "ArgoCD installed successfully."
+}
+
+install_argocd_cli() {
+    log_info "Ensuring ArgoCD CLI is installed..."
+
+    if command -v argocd &> /dev/null; then
+        log_info "argocd CLI already available at $(command -v argocd)"
+        return 0
+    fi
+
+    local version="${ARGOCD_CLI_VERSION}"
+    local os="linux"
+    local arch="$(uname -m)"
+    case "$arch" in
+        x86_64) arch="amd64" ;; 
+        aarch64|arm64) arch="arm64" ;;
+        *) arch="${arch}" ;;
+    esac
+
+    local download_url="https://github.com/argoproj/argo-cd/releases/download/${version}/argocd-${os}-${arch}"
+    local tmpfile
+    tmpfile=$(mktemp)
+
+    local attempt
+    for attempt in 1 2 3; do
+        if curl -fsSL -o "$tmpfile" "$download_url"; then
+            break
+        fi
+        log_warn "Attempt $attempt failed to download argocd CLI, retrying..."
+        sleep 1
+    done
+
+    if [ ! -s "$tmpfile" ]; then
+        log_error "Failed to download argocd CLI from $download_url"
+        rm -f "$tmpfile"
+        exit 1
+    fi
+
+    chmod +x "$tmpfile"
+    local target="/usr/local/bin/argocd"
+    if [ -w "$(dirname "$target")" ]; then
+        mv "$tmpfile" "$target"
+    else
+        sudo mv "$tmpfile" "$target"
+    fi
+
+    log_info "argocd CLI installed at $target"
 }
 
 readonly CREDENTIAL_PROMPTS=(
@@ -499,7 +547,7 @@ configure_keycloak_clients() {
             -s protocol=openid-connect \
             -s publicClient=false \
             -s standardFlowEnabled=true \
-            -s 'redirectUris=[\"http://localhost:8080/*\",\"http://argocd.infra.svc.cluster.local/*\"]' \
+            -s 'redirectUris=[\"http://localhost:8080/*\",\"http://argocd-server.argocd.svc.cluster.local:8080/*\"]' \
             -s webOrigins='[\"+\"]' \
             -s serviceAccountsEnabled=true
         
@@ -659,8 +707,9 @@ main() {
     
     install_k3s
     echo
-    
+
     install_argocd
+    install_argocd_cli
     echo
     
     prompt_secrets
@@ -693,7 +742,7 @@ main() {
     if poll_applications; then
         log_info "=== Bootstrap Complete ==="
         log_info "All services are healthy!"
-        log_info "ArgoCD UI: kubectl port-forward svc/argocd-server -n argocd 8080:443"
+        log_info "ArgoCD UI: kubectl port-forward svc/argocd-server -n argocd 8080:8080"
         log_info "Keycloak: kubectl port-forward svc/keycloak -n infra 8080:8080"
         log_info "Headlamp: kubectl port-forward svc/headlamp -n infra 4466:80"
         log_info "  (Login with: kubectl create token headlamp -n infra)"

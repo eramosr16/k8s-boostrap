@@ -11,6 +11,6 @@ spec:
       kind: Rule
       services:
         - name: argocd-server
-          port: 443
+          port: 8080
   tls:
     certResolver: le

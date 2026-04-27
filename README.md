@@ -32,6 +32,7 @@ Changes are stored in `openspec/changes/` and organized in an `archive/` subdire
 
 - **2026-04-27**: Removed the unused `hello-world` application from `infra/applications/` (change: `remove-hello-world-app`).
 - **2026-04-27**: Updated `scripts/run-all.sh` so credential prompts remain the single source of truth, keeping exports aligned and never sourcing secrets from `config.yaml` (change: `validate-credentials-against-config`).
+- **2026-04-27**: Ensured `scripts/run-all.sh` installs the `argocd` CLI automatically so diagnostics and troubleshooting commands work right after bootstrap (change: `install-argocd-cli`).
 - **2026-04-14**: Added CoreDNS alias tracking for `auth.<domain>` so Keycloak tokens resolve internally.
 - **2026-04-10**: Added Keycloak infra realm for service accounts and K3s OIDC auth
 - **2026-04-10**: Replaced Portainer with Headlamp dashboard
@@ -129,6 +130,8 @@ The easiest way to set up the cluster is using the automated `run-all.sh` script
 ./scripts/run-all.sh
 ```
 
+The bootstrap script now installs the `argocd` CLI (`/usr/local/bin/argocd`) if it is missing, so you can run `argocd app list` right after bootstrap completes. Override the downloaded version with `ARGOCD_CLI_VERSION` if needed.
+
 The script will prompt you for credentials (passwords are hidden for security):
 
 1. **PostgreSQL** - Database password
@@ -154,7 +157,7 @@ After successful bootstrap:
 
 ```bash
 # ArgoCD UI
-kubectl port-forward svc/argocd-server -n argocd 8080:443
+kubectl port-forward svc/argocd-server -n argocd 8080:8080
 # Open http://localhost:8080 - Username: admin
 
 # Keycloak Admin Console
@@ -197,7 +200,7 @@ If you prefer to set up manually (or need more control), follow these steps:
 3. **Access ArgoCD UI**:
 
    ```bash
-   kubectl port-forward svc/argocd-server -n argocd 8080:443
+    kubectl port-forward svc/argocd-server -n argocd 8080:8080
    ```
 
    Then open http://localhost:8080 in your browser.
@@ -354,7 +357,7 @@ Internal service endpoints accessible within the cluster:
 | Prometheus    | `prometheus.infra.svc.cluster.local`              | 9090 | infra     |
 | Grafana       | `grafana.infra.svc.cluster.local`                 | 3000 | infra     |
 | Keycloak      | `keycloak.infra.svc.cluster.local`                | 8080 | infra     |
-| ArgoCD        | `argocd.infra.svc.cluster.local`                  | 443  | argocd    |
+| ArgoCD        | `argocd-server.argocd.svc.cluster.local`         | 8080 | argocd    |
 | OpenTelemetry | `opentelemetry-collector.infra.svc.cluster.local` | 4317 | infra     |
 | Loki          | `loki.infra.svc.cluster.local`                    | 3100 | infra     |
 
