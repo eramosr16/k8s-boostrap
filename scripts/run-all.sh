@@ -16,6 +16,43 @@ ROUTE_HEADLAMP="headlamp"
 ROUTE_KEYCLOAK="keycloak"
 KEYCLOAK_HOST_IP=""
 
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+log_info() {
+    echo -e "${GREEN}[INFO]${NC} $1"
+}
+
+log_warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+check_requirements() {
+    local missing=0
+    local tool
+    for tool in python3 docker; do
+        if ! command -v "$tool" &> /dev/null; then
+            log_error "Dependency '$tool' is missing. Install it before running this script."
+            missing=1
+            continue
+        fi
+        if [ "$tool" = "docker" ]; then
+            if ! docker info >/dev/null 2>&1; then
+                log_warn "Docker binary is present but the daemon is unreachable. Ensure Docker is running if this script needs it."
+            fi
+        fi
+    done
+    if [ $missing -ne 0 ]; then
+        exit 1
+    fi
+}
+
 load_cluster_config() {
     if [ -f "$CONFIG_FILE" ]; then
         if command -v python3 &> /dev/null; then
@@ -68,24 +105,24 @@ with open('$CONFIG_FILE') as f:
     export KEYCLOAK_HOST_IP
 }
 
+check_requirements
 load_cluster_config
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
+require_config_update() {
+    if ! git -C "$REPO_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        log_warn "Unable to validate git status for ${CONFIG_FILE}; ensure it's customized before running."
+        return 0
+    fi
 
-log_info() {
-    echo -e "${GREEN}[INFO]${NC} $1"
+    local status_line
+    status_line=$(git -C "$REPO_ROOT" status --short -- "config.yaml" 2>/dev/null)
+    if [ -z "$status_line" ]; then
+        log_error "${CONFIG_FILE} has not changed. Please edit it with your cluster values before running this script."
+        exit 1
+    fi
 }
 
-log_warn() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
-}
-
-log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
+require_config_update
 
 create_keycloak_infra_realm() {
     log_info "=== Creating Keycloak infra Realm ==="
