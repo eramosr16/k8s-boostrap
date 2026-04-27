@@ -253,7 +253,7 @@ prompt_secret() {
             log_error "Failed to read $name"
             return 1
         fi
-        printf "\n"
+        printf "\n\n"
 
         if [ -z "$value" ]; then
             if [ "$allow_empty" = "true" ]; then
