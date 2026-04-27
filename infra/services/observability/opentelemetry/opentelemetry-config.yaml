@@ -45,7 +45,7 @@ data:
         traces:
           receivers: [otlp, jaeger, zipkin]
           processors: [batch]
-          exporters: [prometheus, logging]
+          exporters: [logging]
         metrics:
           receivers: [otlp]
           processors: [batch]
