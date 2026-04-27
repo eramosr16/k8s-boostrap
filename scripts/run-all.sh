@@ -16,6 +16,7 @@ ROUTE_HEADLAMP="headlamp"
 ROUTE_KEYCLOAK="keycloak"
 KEYCLOAK_HOST_IP=""
 ARGOCD_CLI_VERSION="v2.9.11"
+DEFAULT_DNS_FORWARDERS=("8.8.8.8" "1.1.1.1")
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -130,6 +131,29 @@ require_config_update() {
 }
 
 require_config_update
+
+check_dns_forwarders() {
+    if ! command -v nslookup &> /dev/null; then
+        log_warn "nslookup is unavailable; skipping DNS forwarder reachability check."
+        return
+    fi
+
+    local resolver
+    local failed=0
+
+    for resolver in "${DEFAULT_DNS_FORWARDERS[@]}"; do
+        if nslookup github.com "$resolver" >/dev/null 2>&1; then
+            log_info "DNS forwarder $resolver can resolve github.com."
+        else
+            log_warn "DNS forwarder $resolver cannot reach github.com."
+            failed=1
+        fi
+    done
+
+    if [ "$failed" -ne 0 ]; then
+        log_warn "Verify connectivity to the DNS forwarders above if CoreDNS still cannot reach external names."
+    fi
+}
 
 create_keycloak_infra_realm() {
     log_info "=== Creating Keycloak infra Realm ==="
@@ -707,6 +731,8 @@ ensure_keycloak_dns_alias() {
     else
         log_warn "CoreDNS restart failed; check kubeconfig/permissions."
     fi
+
+    check_dns_forwarders
 }
 
 prompt_grafana_password() {
