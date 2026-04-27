@@ -15,7 +15,7 @@ spec:
       serviceAccountName: promtail
       containers:
         - name: promtail
-          image: grafana/promtail:{{IMAGE_PROMTAIL}}
+          image: grafana/promtail:2.9.2
           imagePullPolicy: Always
           args:
             - -config.file=/etc/promtail/promtail.yaml

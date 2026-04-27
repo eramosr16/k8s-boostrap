@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: rabbitmq
-          image: rabbitmq:{{IMAGE_RABBITMQ}}
+          image: rabbitmq:4-management-alpine
           imagePullPolicy: Always
           ports:
             - containerPort: 5672

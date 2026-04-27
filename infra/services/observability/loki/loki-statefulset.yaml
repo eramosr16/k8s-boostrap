@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: loki
-          image: grafana/loki:{{IMAGE_LOKI}}
+          image: grafana/loki:2.9.2
           imagePullPolicy: Always
           ports:
             - containerPort: 3100

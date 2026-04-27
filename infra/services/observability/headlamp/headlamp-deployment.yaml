@@ -16,7 +16,7 @@ spec:
       serviceAccountName: headlamp
       containers:
         - name: headlamp
-          image: ghcr.io/headlamp-k8s/headlamp:{{IMAGE_HEADLAMP}}
+          image: ghcr.io/headlamp-k8s/headlamp:latest
           imagePullPolicy: Always
           args:
             - "-in-cluster"
