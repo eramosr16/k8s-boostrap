@@ -201,19 +201,33 @@ prompt_secret() {
     local description="$3"
     local allow_empty="$4"
     local value=""
-    
-    while [ -z "$value" ]; do
-        echo -n "$description [$var_name]: "
-        read -s value
-        echo
+    local prefilled="${!var_name}"
+
+    if [ -n "$prefilled" ]; then
+        echo "$prefilled"
+        return 0
+    fi
+
+    while true; do
+        printf "%s [%s]: " "$description" "$var_name"
+        if ! read -s value; then
+            log_error "Failed to read $name"
+            return 1
+        fi
+        printf "\n"
+
         if [ -z "$value" ]; then
             if [ "$allow_empty" = "true" ]; then
+                echo ""
                 return 0
             fi
             log_error "$name cannot be empty. Please try again."
+            continue
         fi
+
+        echo "$value"
+        return 0
     done
-    echo "$value"
 }
 
 install_k3s() {
