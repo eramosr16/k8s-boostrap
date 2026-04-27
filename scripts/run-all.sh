@@ -317,11 +317,12 @@ install_argocd() {
         kubectl create namespace argocd
     fi
 
-    kubectl apply --server-side --force-conflicts -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
-
-    log_info "Replacing argocd-server service with the customized 8080-only version..."
+    log_info "Removing any existing argocd-server service before installing upstream manifests..."
     kubectl delete svc argocd-server -n argocd --ignore-not-found
-    kubectl apply -f infra/services/observability/argocd/argocd-server-service.yaml -n argocd
+    kubectl apply --server-side --force-conflicts -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+    log_info "Re-applying the custom 8080-only argocd-server service..."
+    kubectl delete svc argocd-server -n argocd --ignore-not-found
+    kubectl apply -n argocd -f infra/services/observability/argocd/argocd-server-service.yaml
 
     log_info "Waiting for ArgoCD to be ready..."
     kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=argocd-server -n argocd --timeout=300s

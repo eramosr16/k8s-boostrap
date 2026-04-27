@@ -12,9 +12,10 @@ echo "Creating argocd namespace..."
 kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
 
 echo "Installing ArgoCD..."
+echo "Cleaning existing argocd-server service before reinstall..."
+kubectl delete svc argocd-server -n argocd --ignore-not-found
 kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
-
-echo "Replacing argocd-server service with the customized 8080-only version..."
+echo "Removing the upstream argocd-server service and applying the custom 8080-only version..."
 kubectl delete svc argocd-server -n argocd --ignore-not-found
 kubectl apply -n argocd -f infra/services/observability/argocd/argocd-server-service.yaml
 
