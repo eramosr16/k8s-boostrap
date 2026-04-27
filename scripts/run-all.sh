@@ -56,6 +56,11 @@ with open('$CONFIG_FILE') as f:
     print(d.get('routes', {}).get('keycloak', 'keycloak'))
 " 2>/dev/null) || ROUTE_KEYCLOAK="keycloak"
             KEYCLOAK_HOST_IP=$(python3 -c "
+import yaml
+with open('$CONFIG_FILE') as f:
+    d = yaml.safe_load(f)
+    print(d.get('cluster', {}).get('hostIP', ''))
+" 2>/dev/null) || KEYCLOAK_HOST_IP=""
         fi
     fi
     export CLUSTER_DOMAIN KEYCLOAK_REALM
