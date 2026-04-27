@@ -14,6 +14,11 @@ spec:
         app: headlamp
     spec:
       serviceAccountName: headlamp
+      volumes:
+        - name: headlamp-data
+          emptyDir: {}
+        - name: headlamp-tmp
+          emptyDir: {}
       containers:
         - name: headlamp
           image: ghcr.io/headlamp-k8s/headlamp:latest
@@ -50,6 +55,11 @@ spec:
             runAsGroup: 10001
             fsGroup: 10001
             readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: headlamp-data
+              mountPath: /headlamp
+            - name: headlamp-tmp
+              mountPath: /tmp
           readinessProbe:
             httpGet:
               scheme: HTTP
