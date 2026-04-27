@@ -99,11 +99,17 @@ with open('$CONFIG_FILE') as f:
     d = yaml.safe_load(f)
     print(d.get('cluster', {}).get('hostIP', ''))
 " 2>/dev/null) || KEYCLOAK_HOST_IP=""
+            TRAEFIK_EMAIL=$(python3 -c "
+import yaml
+with open('$CONFIG_FILE') as f:
+    d = yaml.safe_load(f)
+    print(d.get('traefik', {}).get('email', ''))
+" 2>/dev/null) || TRAEFIK_EMAIL=""
         fi
     fi
     export CLUSTER_DOMAIN KEYCLOAK_REALM
     export ROUTE_ARGOCD ROUTE_GRAFANA ROUTE_HEADLAMP ROUTE_KEYCLOAK
-    export KEYCLOAK_HOST_IP
+    export KEYCLOAK_HOST_IP TRAEFIK_EMAIL
 }
 
 check_requirements
@@ -455,7 +461,39 @@ apply_root_app() {
     fi
     
     kubectl apply -f "$ROOT_APP"
+    patch_traefik_templates
     log_info "Root Application applied."
+}
+
+render_template() {
+    local template="$1"
+    python3 - "$template" <<'PY'
+import os
+import re
+import sys
+from pathlib import Path
+
+text = Path(sys.argv[1]).read_text()
+
+def substitute(match):
+    key = match.group(1)
+    return os.environ.get(key, match.group(0))
+
+print(re.sub(r"\{\{([A-Z0-9_]+)\}\}", substitute, text))
+PY
+}
+
+patch_traefik_templates() {
+    if [ -z "$TRAEFIK_EMAIL" ]; then
+        log_warn "TRAEFIK_EMAIL not configured; skipping Traefik template rendering."
+        return 0
+    fi
+
+    local template_dir="${REPO_ROOT}/infra/services/gateway"
+    log_info "Applying user-specific Traefik configuration from config.yaml..."
+    render_template "$template_dir/traefik-config.yaml" | kubectl apply -f -
+    render_template "$template_dir/traefik-acme-secret.yaml" | kubectl apply -f -
+    log_info "Traefik email from config.yaml applied to kube-system resources."
 }
 
 wait_for_keycloak() {
