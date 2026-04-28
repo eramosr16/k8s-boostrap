@@ -56,7 +56,6 @@ check_requirements() {
     if [ $missing -ne 0 ]; then
         exit 1
     fi
-    ensure_aws_cli_installed
 }
 
 load_cluster_config() {
@@ -117,48 +116,19 @@ load_env_file() {
     fi
 
     log_info "Loading environment overrides from $(basename "$ENV_FILE")"
-
-    # shellcheck disable=SC1090
-    set -a
-    source <(sed 's/\r$//' "$ENV_FILE")
-    set +a
-}
-
-ensure_aws_cli_installed() {
-    if command -v aws >/dev/null; then
-        log_info "aws CLI already available at $(command -v aws)"
-        return 0
-    fi
-
-    local run_cmd=""
-    if [ "$(id -u)" -ne 0 ]; then
-        if ! command -v sudo >/dev/null; then
-            log_error "aws CLI missing and neither root nor sudo is available; install it manually."
-            exit 1
+    while IFS= read -r line || [ -n "$line" ]; do
+        line="${line//$'\r'/}"
+        line="${line%%#*}"
+        if [ -z "$line" ]; then
+            continue
         fi
-        run_cmd="sudo"
-    fi
-
-    if command -v apt-get >/dev/null; then
-        log_info "Installing aws CLI via apt-get..."
-        if [ "$run_cmd" = "" ]; then
-            DEBIAN_FRONTEND=noninteractive apt-get update -y
-            DEBIAN_FRONTEND=noninteractive apt-get install -y awscli
-        else
-            $run_cmd sh -c 'DEBIAN_FRONTEND=noninteractive apt-get update -y'
-            $run_cmd sh -c 'DEBIAN_FRONTEND=noninteractive apt-get install -y awscli'
+        if ! echo "$line" | grep -Eq '^[A-Za-z_][A-Za-z0-9_]*='; then
+            continue
         fi
-    elif command -v yum >/dev/null; then
-        log_info "Installing aws CLI via yum..."
-        if [ "$run_cmd" = "" ]; then
-            yum install -y awscli
-        else
-            $run_cmd yum install -y awscli
-        fi
-    else
-        log_error "Unable to install aws CLI automatically; please install it (e.g., via apt or yum) and rerun this script."
-        exit 1
-    fi
+        key="${line%%=*}"
+        value="${line#*=}"
+        export "$key"="$value"
+    done < "$ENV_FILE"
 }
 
 check_requirements
@@ -616,15 +586,23 @@ create_ecr_registry_secret() {
         return 0
     fi
 
-    log_info "Creating initial ecr-registry pull secret..."
+    if ! command -v docker &> /dev/null; then
+        log_warn "docker binary missing; cannot create ecr-registry secret automatically."
+        return 0
+    fi
+
+    log_info "Creating initial ecr-registry pull secret via dockerized aws CLI..."
     local docker_server="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+    local aws_cli_image="public.ecr.aws/aws-cli/aws-cli:2.27.41"
     local token
 
-    if ! token=$(AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
-        AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
-        AWS_REGION="$AWS_REGION" \
-        aws ecr get-login-password --region "$AWS_REGION" 2>/dev/null); then
-        log_warn "Failed to fetch ECR login password; ecr-registry secret creation skipped."
+    if ! token=$(docker run --rm -i \
+        -e AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
+        -e AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
+        -e AWS_REGION="$AWS_REGION" \
+        "$aws_cli_image" \
+        ecr get-login-password 2>/dev/null); then
+        log_warn "Failed to fetch ECR login password via docker; ecr-registry secret creation skipped."
         return 0
     fi
 
