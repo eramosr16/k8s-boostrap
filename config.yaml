@@ -8,9 +8,6 @@ k3s:
   disable: []
   serverFlags: []
 
-traefik:
-  email: admin@example.com
-
 keycloak:
   realm: infra
 

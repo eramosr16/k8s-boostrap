@@ -15,6 +15,7 @@ ROUTE_GRAFANA="grafana"
 ROUTE_HEADLAMP="headlamp"
 ROUTE_KEYCLOAK="keycloak"
 KEYCLOAK_HOST_IP=""
+TRAEFIK_EMAIL=""
 ARGOCD_CLI_VERSION="v2.9.11"
 DEFAULT_DNS_FORWARDERS=("8.8.8.8" "1.1.1.1")
 
@@ -100,12 +101,6 @@ with open('$CONFIG_FILE') as f:
     d = yaml.safe_load(f)
     print(d.get('cluster', {}).get('hostIP', ''))
 " 2>/dev/null) || KEYCLOAK_HOST_IP=""
-            TRAEFIK_EMAIL=$(python3 -c "
-import yaml
-with open('$CONFIG_FILE') as f:
-    d = yaml.safe_load(f)
-    print(d.get('traefik', {}).get('email', ''))
-" 2>/dev/null) || TRAEFIK_EMAIL=""
         fi
     fi
     export CLUSTER_DOMAIN KEYCLOAK_REALM
@@ -300,6 +295,16 @@ prompt_secret() {
     done
 }
 
+mask_value_for_logs() {
+    local value="$1"
+    local prefix
+    prefix="${value:0:4}"
+    if [ -z "$prefix" ]; then
+        prefix="(empty)"
+    fi
+    printf "[%s]****" "$prefix"
+}
+
 install_k3s() {
     log_info "Checking for K3s..."
     
@@ -485,6 +490,10 @@ prompt_secrets() {
         export TRAEFIK_EMAIL
     fi
 
+    if [ -n "$TRAEFIK_EMAIL" ]; then
+        log_info "Let's Encrypt email recorded as $(mask_value_for_logs "$TRAEFIK_EMAIL")"
+    fi
+
     if [ -z "$AWS_REGION" ]; then
         AWS_REGION="us-east-1"
         export AWS_REGION
@@ -559,20 +568,20 @@ apply_root_app() {
 render_template() {
     local template="$1"
     python3 - "$template" <<'PY'
-    import os
-    import re
-    import sys
-    from pathlib import Path
+import os
+import re
+import sys
+from pathlib import Path
 
-    text = Path(sys.argv[1]).read_text()
-    # normalize Windows-style line endings to avoid control characters for kubectl
-    text = text.replace('\r', '')
+text = Path(sys.argv[1]).read_text()
+# normalize Windows-style line endings to avoid control characters for kubectl
+text = text.replace('\r', '')
 
-    def substitute(match):
-        key = match.group(1)
-        return os.environ.get(key, match.group(0))
+def substitute(match):
+    key = match.group(1)
+    return os.environ.get(key, match.group(0))
 
-    print(re.sub(r"\{\{([A-Z0-9_]+)\}\}", substitute, text))
+print(re.sub(r"\{\{([A-Z0-9_]+)\}\}", substitute, text))
 PY
 }
 
@@ -583,7 +592,7 @@ patch_traefik_templates() {
     fi
 
     local template_dir="${REPO_ROOT}/infra/services/gateway"
-    log_info "Applying user-specific Traefik configuration from config.yaml..."
+    log_info "Applying user-specific Traefik configuration from prompted email..."
     render_template "$template_dir/traefik-config.yaml" | kubectl apply -f -
     render_template "$template_dir/traefik-acme-secret.yaml" | kubectl apply -f -
     log_info "Traefik email from config.yaml applied to kube-system resources."
