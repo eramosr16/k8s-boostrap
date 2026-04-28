@@ -30,6 +30,7 @@ Changes are stored in `openspec/changes/` and organized in an `archive/` subdire
 
 ### Recent Updates
 
+- **2026-04-28**: Updated the Keycloak IAM service manifest to use the optimized Bitnami image and documented the change (change: `update-keycloak-service`).
 - **2026-04-28**: Removed placeholder image overrides from `config.yaml` and the bootstrap script so ArgoCD-manifests drive service images (change: `remove-config-image-placeholders`).
 - **2026-04-27**: Removed the unused `hello-world` application from `infra/applications/` (change: `remove-hello-world-app`).
 - **2026-04-27**: Updated `scripts/run-all.sh` so credential prompts remain the single source of truth, keeping exports aligned and never sourcing secrets from `config.yaml` (change: `validate-credentials-against-config`).
