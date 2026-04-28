@@ -47,9 +47,9 @@ spec:
             - name: KC_DB_URL
               value: jdbc:postgresql://postgres.infra.svc.cluster.local:5432/keycloak
           securityContext:
-            runAsNonRoot: true
-            runAsUser: 10001
-            runAsGroup: 10001
+            # Run as root to allow Keycloak to write to /opt/keycloak during startup
+            runAsUser: 0
+            runAsGroup: 0
             readOnlyRootFilesystem: false
           resources:
             requests:
