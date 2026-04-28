@@ -8,7 +8,7 @@ This folder contains Kubernetes manifests to configure registry authentication f
 |------|----------------|-------------|
 | `aws-ecr-secret.yaml` | ✅ Yes | Initial K8s Secret with ECR credentials |
 | `registry-config.yaml` | ✅ Yes | ServiceAccount with ImagePullSecret reference |
-| `ecr-credential-provider.yaml` | ✅ Yes | DaemonSet for automatic credential rotation |
+| `ecr-credential-provider.yaml` | ✅ Yes | CronJob `refresh-ecr-registry-secret` (plus RBAC/ServiceAccount) that refreshes the `ecr-registry` pull secret every 10 minutes |
 | `registry-config.env` | ❌ No | AWS credentials (add to .gitignore) |
 
 ## Prerequisites
@@ -33,6 +33,17 @@ Edit `registry-config.env` with your AWS details:
 - `AWS_ACCESS_KEY_ID`: AWS access key
 - `AWS_SECRET_ACCESS_KEY`: AWS secret key
 
+### 3. Create the refresh secret
+
+Once the env file has the correct values, create the credentials secret that the CronJob consumes:
+
+```bash
+kubectl create secret generic ecr-refresh-aws-creds \
+  --namespace infra \
+  --from-env-file=infra/services/registry/registry-config.env \
+  --dry-run=client -o yaml | kubectl apply -f -
+```
+
 ## Deployment
 
 ### ArgoCD-managed (Automatic)
@@ -47,17 +58,13 @@ ArgoCD will automatically sync all manifests.
 
 ## Automatic Credential Rotation
 
-The ECR credential provider DaemonSet automatically:
-1. Runs on each node as a DaemonSet
-2. Queries AWS ECR for auth tokens (valid for 12 hours)
-3. Updates the `ecr-registry` secret with new credentials
-4. Refreshes tokens every 6 hours (configurable via REFRESH_INTERVAL)
+The `refresh-ecr-registry-secret` CronJob runs every 10 minutes in the `infra` namespace, downloads `kubectl`, and uses the AWS CLI to rotate the `ecr-registry` pull secret in the `default` namespace by calling `aws ecr get-login-password`. The job relies on the `ecr-refresh-aws-creds` secret for AWS credentials and uses a ClusterRole/ServiceAccount to patch the secret.
 
 ### How it works
 
-- The credential provider container runs with host network access
-- It has RBAC permissions to update the `ecr-registry` secret in the `default` namespace
-- When a pod tries to pull an image, kubelet reads the refreshed credentials from the secret
+- The CronJob runs the public `public.ecr.aws/aws-cli/aws-cli:2.27.41` image with the AWS credentials injected via `envFrom`.
+- It writes the refreshed docker-registry secret for `${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com` into the `default` namespace so node kubelets can pull private images.
+- The `registry-config.yaml` service account (stored in `kube-system`) lists `ecr-registry` in `imagePullSecrets` so every pod can benefit from the rotated credentials.
 
 ## Manual Rotation (Fallback)
 
