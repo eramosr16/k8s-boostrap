@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: keycloak
-          image: bitnami/keycloak:latest
+          image: quay.io/keycloak/keycloak:26.6
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
