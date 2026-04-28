@@ -535,11 +535,13 @@ create_secrets() {
     kubectl create namespace infra --dry-run=client -o yaml | kubectl apply -f -
     
     kubectl create secret generic postgres-secret -n infra \
-        --from-literal=password="$POSTGRES_PASSWORD" \
+        --from-literal=POSTGRES_DB=postgres \
+        --from-literal=POSTGRES_USER=postgres \
+        --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
         --dry-run=client -o yaml | kubectl apply -f -
     
     kubectl create secret generic redis-secret -n infra \
-        --from-literal=password="$REDIS_PASSWORD" \
+        --from-literal=REDIS_PASSWORD="$REDIS_PASSWORD" \
         --dry-run=client -o yaml | kubectl apply -f -
     
     kubectl create secret generic rabbitmq-secret -n infra \
@@ -550,10 +552,20 @@ create_secrets() {
     kubectl create secret generic keycloak-secret -n infra \
         --from-literal=KEYCLOAK_ADMIN_PASSWORD="$KEYCLOAK_ADMIN_PASSWORD" \
         --from-literal=KEYCLOAK_DATABASE_PASSWORD="$KEYCLOAK_DATABASE_PASSWORD" \
+        --from-literal=KC_BOOTSTRAP_ADMIN_PASSWORD="$KEYCLOAK_ADMIN_PASSWORD" \
         --dry-run=client -o yaml | kubectl apply -f -
     
-    kubectl create secret generic traefik-acme-secret -n infra \
+    kubectl create secret generic traefik-acme-secret -n kube-system \
         --from-literal=email="$LETS_ENCRYPT_EMAIL" \
+        --dry-run=client -o yaml | kubectl apply -f -
+    
+    kubectl create secret generic grafana-secret -n infra \
+        --from-literal=admin-password="$GRAFANA_ADMIN_PASSWORD" \
+        --dry-run=client -o yaml | kubectl apply -f -
+    
+    kubectl create secret generic headlamp-oidc-secret -n infra \
+        --from-literal=OIDC_CLIENT_ID=headlamp \
+        --from-literal=OIDC_ISSUER_URL="http://keycloak.infra.svc.cluster.local:8080/realms/master" \
         --dry-run=client -o yaml | kubectl apply -f -
     
     if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ]; then

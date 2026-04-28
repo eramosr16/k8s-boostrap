@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: grafana
-          image: grafana/alpine:3.15.4
+          image: grafana/grafana:10.4.0
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
@@ -41,7 +41,6 @@ spec:
             runAsNonRoot: true
             runAsUser: 10001
             runAsGroup: 10001
-            fsGroup: 10001
             readOnlyRootFilesystem: true
           resources:
             requests:
