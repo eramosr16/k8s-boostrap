@@ -22,12 +22,23 @@ spec:
               name: http
             - containerPort: 8443
               name: https
+          args:
+            - start
+            - --proxy=edge
+            - --hostname-strict=false
+            - --hostname-strict-https=false
+            - --http-port=8080
+            - --hostname=keycloak.infra.svc.cluster.local
           env:
             - name: KEYCLOAK_ADMIN_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: keycloak-secret
                   key: KEYCLOAK_ADMIN_PASSWORD
+            - name: KEYCLOAK_ADMIN
+              value: admin
+            - name: KC_HOSTNAME
+              value: keycloak.infra.svc.cluster.local
             - name: KC_BOOTSTRAP_ADMIN_USERNAME
               valueFrom:
                 configMapKeyRef:
