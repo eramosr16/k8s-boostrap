@@ -6,7 +6,6 @@ This folder contains Kubernetes manifests to configure registry authentication f
 
 | File | ArgoCD-managed | Description |
 |------|----------------|-------------|
-| `aws-ecr-secret.yaml` | ✅ Yes | Initial K8s Secret with ECR credentials |
 | `registry-config.yaml` | ✅ Yes | ServiceAccount with ImagePullSecret reference |
 | `ecr-credential-provider.yaml` | ✅ Yes | CronJob `refresh-ecr-registry-secret` (plus RBAC/ServiceAccount) that refreshes the `ecr-registry` pull secret every 10 minutes |
 | `registry-config.env.example` | ❌ No | Template for AWS credentials (copy to `registry-config.env` before you create the `ecr-refresh-aws-creds` secret) |
@@ -44,6 +43,17 @@ kubectl create secret generic ecr-refresh-aws-creds \
   --dry-run=client -o yaml | kubectl apply -f -
 ```
 
+Running `scripts/run-all.sh` also seeds the first `ecr-registry` pull secret automatically (it runs the AWS CLI container via Docker and pipes the resulting docker-registry secret straight to `kubectl apply`). If you need to bootstrap the pull secret manually instead, run:
+
+```bash
+kubectl create secret docker-registry ecr-registry \
+  --namespace default \
+  --docker-server="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com" \
+  --docker-username=AWS \
+  --docker-password="$(aws ecr get-login-password --region ${AWS_REGION})" \
+  --dry-run=client -o yaml | kubectl apply -f -
+```
+
 ## Deployment
 
 ### ArgoCD-managed (Automatic)
@@ -68,16 +78,16 @@ The `refresh-ecr-registry-secret` CronJob runs every 10 minutes in the `infra` n
 
 ## Manual Rotation (Fallback)
 
-If the credential rotation CronJob fails:
+If the credential rotation CronJob fails, rerun the AWS CLI command and refresh the pull secret directly again:
 
-1. Regenerate ECR token:
-   ```bash
-   aws ecr get-login-password --region us-east-1
-   ```
-
-2. Re-encode as base64 and update `aws-ecr-secret.yaml`
-
-3. Commit and push - ArgoCD will sync
+```bash
+kubectl create secret docker-registry ecr-registry \
+  --namespace default \
+  --docker-server="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com" \
+  --docker-username=AWS \
+  --docker-password="$(aws ecr get-login-password --region ${AWS_REGION})" \
+  --dry-run=client -o yaml | kubectl apply -f -
+```
 
 ## Troubleshooting
 

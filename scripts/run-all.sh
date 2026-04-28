@@ -281,6 +281,8 @@ prompt_secret() {
         fi
         printf "\n" >&2
 
+        value="${value//$'\r'/}"
+
         if [ -z "$value" ]; then
             if [ "$allow_empty" = "true" ]; then
                 echo ""
@@ -298,7 +300,9 @@ prompt_secret() {
 mask_value_for_logs() {
     local value="$1"
     local prefix
-    prefix="${value:0:4}"
+    local clean_value
+    clean_value="${value//$'\r'/}"
+    prefix="${clean_value:0:4}"
     if [ -z "$prefix" ]; then
         prefix="(empty)"
     fi
@@ -548,6 +552,42 @@ create_secrets() {
     fi
 
     log_info "Secrets created."
+
+    create_ecr_registry_secret
+}
+
+create_ecr_registry_secret() {
+    if [ -z "$AWS_ACCOUNT_ID" ] || [ -z "$AWS_REGION" ] || [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+        log_warn "Skipping ecr-registry secret creation; AWS credentials incomplete."
+        return 0
+    fi
+
+    if ! command -v aws &> /dev/null; then
+        log_warn "aws CLI not found in PATH; skip initial ecr-registry secret creation."
+        return 0
+    fi
+
+    log_info "Creating initial ecr-registry pull secret..."
+    local docker_server="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+    local token
+
+    if ! token=$(AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
+        AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
+        AWS_REGION="$AWS_REGION" \
+        aws ecr get-login-password --region "$AWS_REGION" 2>/dev/null); then
+        log_warn "Failed to fetch ECR login password; ecr-registry secret creation skipped."
+        return 0
+    fi
+
+    token="${token//$'\n'/}"
+
+    kubectl create secret docker-registry ecr-registry \
+        --namespace default \
+        --docker-server="$docker_server" \
+        --docker-username=AWS \
+        --docker-password="$token" \
+        --dry-run=client -o yaml | kubectl apply -f -
+    log_info "Initial ecr-registry pull secret ensured."
 }
 
 apply_root_app() {
@@ -595,7 +635,7 @@ patch_traefik_templates() {
     log_info "Applying user-specific Traefik configuration from prompted email..."
     render_template "$template_dir/traefik-config.yaml" | kubectl apply -f -
     render_template "$template_dir/traefik-acme-secret.yaml" | kubectl apply -f -
-    log_info "Traefik email from config.yaml applied to kube-system resources."
+    log_info "Traefik email applied to kube-system resources."
 }
 
 wait_for_keycloak() {

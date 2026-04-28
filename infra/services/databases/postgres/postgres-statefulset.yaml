@@ -87,5 +87,5 @@ spec:
           resources:
             requests:
               storage: 20Gi
-          storageClassName: local-path
+          storageClassName: standard
           volumeMode: Filesystem

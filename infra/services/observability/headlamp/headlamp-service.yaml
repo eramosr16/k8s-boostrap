@@ -4,11 +4,12 @@ metadata:
   name: headlamp
   namespace: infra
 spec:
-  type: ClusterIP
+  type: NodePort
   ports:
     - port: 80
       targetPort: 4466
       protocol: TCP
       name: http
+      nodePort: 30466
   selector:
     app: headlamp
