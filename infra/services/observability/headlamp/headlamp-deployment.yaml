@@ -46,6 +46,12 @@ spec:
                 secretKeyRef:
                   name: headlamp-oidc-secret
                   key: OIDC_ISSUER_URL
+            - name: HOME
+              value: /headlamp
+            - name: XDG_CONFIG_HOME
+              value: /headlamp/.config
+            - name: XDG_CACHE_HOME
+              value: /headlamp/.cache
           ports:
             - containerPort: 4466
               name: http

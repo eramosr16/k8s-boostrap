@@ -284,7 +284,7 @@ prompt_secret() {
             log_error "Failed to read $name"
             return 1
         fi
-        printf "\n\n" >&2
+        printf "\n" >&2
 
         if [ -z "$value" ]; then
             if [ "$allow_empty" = "true" ]; then
@@ -338,6 +338,48 @@ install_k3s() {
     log_info "Verifying cluster connectivity..."
     kubectl cluster-info
     log_info "K3s setup complete."
+}
+
+prompt_confirmation() {
+    local prompt="$1"
+    if [ ! -t 0 ]; then
+        log_warn "Non-interactive shell detected; defaulting to 'no'."
+        return 1
+    fi
+
+    while true; do
+        read -rp "$prompt [y/N]: " response
+        case "${response,,}" in
+            y|yes)
+                return 0
+                ;;
+            n|no|"")
+                return 1
+                ;;
+            *)
+                echo "Please answer yes or no.";
+                ;;
+        esac
+    done
+}
+
+reset_existing_argocd() {
+    if ! kubectl get namespace argocd &> /dev/null; then
+        return 0
+    fi
+
+    log_warn "An existing ArgoCD installation was detected."
+    if ! prompt_confirmation "Delete the current ArgoCD namespace and all cached applications so we can start fresh?"; then
+        log_info "Keeping existing ArgoCD installation as requested."
+        return 0
+    fi
+
+    log_info "Deleting namespace argocd to clear previous ArgoCD resources..."
+    kubectl delete namespace argocd --ignore-not-found
+    while kubectl get namespace argocd &> /dev/null; do
+        sleep 2
+    done
+    log_info "ArgoCD namespace removed. A fresh installation will be applied next."
 }
 
 install_argocd() {
@@ -435,6 +477,11 @@ prompt_secrets() {
     done
 
     log_info "Credentials collected."
+
+    if [ -z "$TRAEFIK_EMAIL" ] && [ -n "$LETS_ENCRYPT_EMAIL" ]; then
+        TRAEFIK_EMAIL="$LETS_ENCRYPT_EMAIL"
+        export TRAEFIK_EMAIL
+    fi
 }
 
 create_secrets() {
@@ -777,6 +824,7 @@ main() {
     install_k3s
     echo
 
+    reset_existing_argocd
     install_argocd
     install_argocd_cli
     echo

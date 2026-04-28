@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: keycloak
-          image: quay.io/keycloak/keycloak:26.6
+          image: bitnami/keycloak:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
@@ -23,13 +23,21 @@ spec:
             - containerPort: 8443
               name: https
           env:
-            - name: KEYCLOAK_ADMIN
-              value: admin
             - name: KEYCLOAK_ADMIN_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: keycloak-secret
                   key: KEYCLOAK_ADMIN_PASSWORD
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: keycloak-config
+                  key: KC_BOOTSTRAP_ADMIN_USERNAME
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secret
+                  key: KC_BOOTSTRAP_ADMIN_PASSWORD
             - name: KC_DB
               valueFrom:
                 configMapKeyRef:
@@ -47,6 +55,26 @@ spec:
                 secretKeyRef:
                   name: keycloak-secret
                   key: KEYCLOAK_DATABASE_PASSWORD
+            - name: KEYCLOAK_DATABASE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: keycloak-config
+                  key: KEYCLOAK_DATABASE_HOST
+            - name: KEYCLOAK_DATABASE_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: keycloak-config
+                  key: KEYCLOAK_DATABASE_PORT
+            - name: KEYCLOAK_DATABASE_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: keycloak-config
+                  key: KEYCLOAK_DATABASE_NAME
+            - name: KEYCLOAK_DATABASE_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: keycloak-config
+                  key: KEYCLOAK_DATABASE_USER
             - name: KC_PROXY
               valueFrom:
                 configMapKeyRef:
