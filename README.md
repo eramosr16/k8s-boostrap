@@ -30,6 +30,7 @@ Changes are stored in `openspec/changes/` and organized in an `archive/` subdire
 
 ### Recent Updates
 
+- **2026-04-28**: Removed placeholder image overrides from `config.yaml` and the bootstrap script so ArgoCD-manifests drive service images (change: `remove-config-image-placeholders`).
 - **2026-04-27**: Removed the unused `hello-world` application from `infra/applications/` (change: `remove-hello-world-app`).
 - **2026-04-27**: Updated `scripts/run-all.sh` so credential prompts remain the single source of truth, keeping exports aligned and never sourcing secrets from `config.yaml` (change: `validate-credentials-against-config`).
 - **2026-04-27**: Ensured `scripts/run-all.sh` installs the `argocd` CLI automatically so diagnostics and troubleshooting commands work right after bootstrap (change: `install-argocd-cli`).
@@ -131,6 +132,8 @@ The easiest way to set up the cluster is using the automated `run-all.sh` script
 ```
 
 The bootstrap script now installs the `argocd` CLI (`/usr/local/bin/argocd`) if it is missing, so you can run `argocd app list` right after bootstrap completes. Override the downloaded version with `ARGOCD_CLI_VERSION` if needed.
+
+Image tags are defined directly in the ArgoCD-managed manifests, so the bootstrap script no longer overwrites them. Update those manifests instead of `config.yaml` when you need to change versions.
 
 The script will prompt you for credentials (passwords are hidden for security):
 
@@ -313,7 +316,7 @@ The cluster uses a centralized `config.yaml` file for non-sensitive values. Befo
 
 1. Edit `config.yaml` in the repository root
 2. Set `traefik.email` to your actual email address
-3. Optionally customize `cluster.domain` and image tags
+3. Optionally customize `cluster.domain`; image tags are defined in the ArgoCD manifests and are not part of `config.yaml`
 
 ```yaml
 cluster:
@@ -321,12 +324,6 @@ cluster:
 
 traefik:
   email: admin@example.com
-
-images:
-  headlamp: latest
-  loki: 2.9.2
-  promtail: 2.9.2
-  prometheus: v2.45.0
 ```
 
 The `run-all.sh` script will automatically use these values when deploying.

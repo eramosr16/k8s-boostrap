@@ -475,7 +475,7 @@ create_secrets() {
 }
 
 apply_root_app() {
-    log_info "Applying root-app.yaml to trigger ArgoCD sync..."
+    log_info "Applying root-app.yaml to trigger ArgoCD sync (images are defined in the ArgoCD manifests and not rewritten here)..."
     
     ROOT_APP="${REPO_ROOT}/boostrap/root-app.yaml"
     
