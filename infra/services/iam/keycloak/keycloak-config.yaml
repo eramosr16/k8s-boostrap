@@ -11,7 +11,7 @@ data:
   KC_DB_USERNAME: postgres
   KC_PROXY: edge
   KC_HOSTNAME_STRICT: "false"
-  KC_HOSTNAME_STRICT_HTTPS: "false"
+  KC_HTTP_ENABLED: "true"
   KEYCLOAK_DATABASE_HOST: postgres.infra.svc.cluster.local
   KEYCLOAK_DATABASE_PORT: "5432"
   KEYCLOAK_DATABASE_NAME: postgres
