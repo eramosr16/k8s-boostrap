@@ -1,2 +1,4 @@
 .opencode/
 **/registry-config.env
+# Local secrets file for scripts/run-all.sh
+.env

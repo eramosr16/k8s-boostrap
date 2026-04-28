@@ -7,6 +7,8 @@ HEALTH_CHECK_TIMEOUT=300
 HEALTH_CHECK_INTERVAL=10
 KEYCLOAK_TIMEOUT=180
 CONFIG_FILE="${REPO_ROOT}/config.yaml"
+ENV_FILE="${REPO_ROOT}/.env"
+ENV_EXAMPLE_FILE="${REPO_ROOT}/env.example"
 
 CLUSTER_DOMAIN="cluster.local"
 KEYCLOAK_REALM="infra"
@@ -54,6 +56,7 @@ check_requirements() {
     if [ $missing -ne 0 ]; then
         exit 1
     fi
+    ensure_aws_cli_installed
 }
 
 load_cluster_config() {
@@ -108,8 +111,59 @@ with open('$CONFIG_FILE') as f:
     export KEYCLOAK_HOST_IP TRAEFIK_EMAIL
 }
 
+load_env_file() {
+    if [ ! -f "$ENV_FILE" ]; then
+        return
+    fi
+
+    log_info "Loading environment overrides from $(basename "$ENV_FILE")"
+
+    # shellcheck disable=SC1090
+    set -a
+    source <(sed 's/\r$//' "$ENV_FILE")
+    set +a
+}
+
+ensure_aws_cli_installed() {
+    if command -v aws >/dev/null; then
+        log_info "aws CLI already available at $(command -v aws)"
+        return 0
+    fi
+
+    local run_cmd=""
+    if [ "$(id -u)" -ne 0 ]; then
+        if ! command -v sudo >/dev/null; then
+            log_error "aws CLI missing and neither root nor sudo is available; install it manually."
+            exit 1
+        fi
+        run_cmd="sudo"
+    fi
+
+    if command -v apt-get >/dev/null; then
+        log_info "Installing aws CLI via apt-get..."
+        if [ "$run_cmd" = "" ]; then
+            DEBIAN_FRONTEND=noninteractive apt-get update -y
+            DEBIAN_FRONTEND=noninteractive apt-get install -y awscli
+        else
+            $run_cmd sh -c 'DEBIAN_FRONTEND=noninteractive apt-get update -y'
+            $run_cmd sh -c 'DEBIAN_FRONTEND=noninteractive apt-get install -y awscli'
+        fi
+    elif command -v yum >/dev/null; then
+        log_info "Installing aws CLI via yum..."
+        if [ "$run_cmd" = "" ]; then
+            yum install -y awscli
+        else
+            $run_cmd yum install -y awscli
+        fi
+    else
+        log_error "Unable to install aws CLI automatically; please install it (e.g., via apt or yum) and rerun this script."
+        exit 1
+    fi
+}
+
 check_requirements
 load_cluster_config
+load_env_file
 
 require_config_update() {
     if ! git -C "$REPO_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -559,11 +613,6 @@ create_secrets() {
 create_ecr_registry_secret() {
     if [ -z "$AWS_ACCOUNT_ID" ] || [ -z "$AWS_REGION" ] || [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
         log_warn "Skipping ecr-registry secret creation; AWS credentials incomplete."
-        return 0
-    fi
-
-    if ! command -v aws &> /dev/null; then
-        log_warn "aws CLI not found in PATH; skip initial ecr-registry secret creation."
         return 0
     fi
 
