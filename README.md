@@ -30,6 +30,8 @@ Changes are stored in `openspec/changes/` and organized in an `archive/` subdire
 
 ### Recent Updates
 
+- **2026-04-29**: Enabled Keycloak health endpoints at port 9000 so Kubernetes probes can succeed and the service becomes ready (`enable-keycloak-healthchecks`).
+- **2026-04-29**: Automated creation of the Keycloak database during bootstrap so Postgres credentials stay in sync (`bootstrap-keycloak-db`).
 - **2026-04-29**: Ensured Keycloak reuses PostgreSQL credentials for its database connection so the optimized image can authenticate (`align-keycloak-db-creds`).
 - **2026-04-29**: Updated the Keycloak bootstrap env vars to use `KC_BOOTSTRAP_ADMIN_*`, matching the optimized image’s expectations (change: `align-keycloak-kc-bootstrap-vars`).
 - **2026-04-28**: Ensured the Keycloak Bitnami bootstrap env vars point at the right secrets so the admin user comes up automatically (change: `align-keycloak-bootstrap-env`).
@@ -427,7 +429,7 @@ Secrets use environment variable placeholders that are replaced during deploymen
 
 | Service    | Secret File          | Environment Variable                                    |
 | ---------- | -------------------- | ------------------------------------------------------- |
-| PostgreSQL | postgres-secret.yaml | `POSTGRES_PASSWORD` (also used by Keycloak)             |
+| PostgreSQL | postgres-secret.yaml | `POSTGRES_PASSWORD` (also used by Keycloak; bootstrap now creates the `keycloak` database) |
 | Redis      | redis-secret.yaml    | `REDIS_PASSWORD`                                        |
 | RabbitMQ   | rabbitmq-secret.yaml | `RABBITMQ_DEFAULT_USER`, `RABBITMQ_DEFAULT_PASS`        |
 | Prometheus | -                    | -                                                       |
@@ -460,7 +462,7 @@ export GRAFANA_ADMIN_PASSWORD="your-secure-password"
 export KEYCLOAK_ADMIN_PASSWORD="your-secure-password"
 export KC_BOOTSTRAP_ADMIN_USERNAME="admin"
 export KC_BOOTSTRAP_ADMIN_PASSWORD="your-secure-password"
-# The Keycloak database password is the same as $POSTGRES_PASSWORD
+# The Keycloak database password is the same as $POSTGRES_PASSWORD (bootstrap script creates the database automatically)
 ```
 
 Then update the secret file with the actual password or use a tool like `envsubst` to replace the placeholder during deployment.
@@ -503,6 +505,10 @@ Create the following groups in the master realm:
 6. Web Origins: `https://argocd.mydomain.com`
 7. Add client scope for groups with Token Mapper (Group Membership)
 8. Create `argocd-admins` group and add admin users
+
+### Keycloak Health Checks
+
+Keycloak now exposes `/health/live`, `/health/ready`, and `/health/started` on port `9000` once you set `KC_HEALTH_ENABLED=true`, `KC_HTTP_ENABLED=true`, `KC_METRICS_ENABLED=true`, and `KC_PROXY_HEADERS=xforwarded`. The deployment’s probes rely on those endpoints so Kubernetes marks the pod as Ready only after the Bitnami runtime reports health.
 
 ## Kube-Score Validation
 

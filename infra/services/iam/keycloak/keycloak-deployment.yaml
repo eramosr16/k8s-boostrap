@@ -22,6 +22,8 @@ spec:
               name: http
             - containerPort: 8443
               name: https
+            - containerPort: 9000
+              name: health
           env:
             - name: KC_BOOTSTRAP_ADMIN_USERNAME
               value: admin
@@ -41,6 +43,14 @@ spec:
                 secretKeyRef:
                   name: postgres-secret
                   key: POSTGRES_PASSWORD
+            - name: KC_HTTP_ENABLED
+              value: "true"
+            - name: KC_HEALTH_ENABLED
+              value: "true"
+            - name: KC_PROXY_HEADERS
+              value: xforwarded
+            - name: KC_METRICS_ENABLED
+              value: "true"
           securityContext:
             # Run as root to allow Keycloak to write to /opt/keycloak during startup
             runAsUser: 0
@@ -54,13 +64,30 @@ spec:
               cpu: 2000m
               memory: 2Gi
           livenessProbe:
-            tcpSocket:
-              port: 8080
-            initialDelaySeconds: 60
+            httpGet:
+              path: /health/live
+              port: 9000
+              scheme: HTTP
+            initialDelaySeconds: 120
             periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+            successThreshold: 1
           readinessProbe:
             httpGet:
               path: /health/ready
-              port: 8080
+              port: 9000
+              scheme: HTTP
             initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+            successThreshold: 1
+          startupProbe:
+            httpGet:
+              path: /health/started
+              port: 9000
+              scheme: HTTP
             periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 30

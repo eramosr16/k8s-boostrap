@@ -631,6 +631,35 @@ create_ecr_registry_secret() {
     log_info "Initial ecr-registry pull secret ensured."
 }
 
+wait_for_postgres() {
+    log_info "Waiting for PostgreSQL to be ready..."
+    kubectl wait --for=condition=Ready pod -l app=postgres -n infra --timeout=180s >/dev/null
+}
+
+create_keycloak_database() {
+    log_info "Ensuring the Keycloak database exists in PostgreSQL..."
+    wait_for_postgres
+
+    local postgres_pod
+    postgres_pod=$(kubectl get pods -n infra -l app=postgres -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+
+    if [ -z "$postgres_pod" ]; then
+        log_error "PostgreSQL pod not found; cannot create keycloak database."
+        return 1
+    fi
+
+    local exists
+    exists=$(kubectl exec -n infra "$postgres_pod" -- env PGPASSWORD="$POSTGRES_PASSWORD" psql -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname='keycloak';" 2>/dev/null || echo "")
+
+    if [ "$exists" = "1" ]; then
+        log_info "Keycloak database already exists."
+        return 0
+    fi
+
+    kubectl exec -n infra "$postgres_pod" -- env PGPASSWORD="$POSTGRES_PASSWORD" psql -U postgres -c "CREATE DATABASE keycloak;"
+    log_info "Keycloak database created."
+}
+
 apply_root_app() {
     log_info "Applying root-app.yaml to trigger ArgoCD sync (images are defined in the ArgoCD manifests and not rewritten here)..."
     
@@ -972,10 +1001,11 @@ main() {
     install_argocd
     install_argocd_cli
     echo
-    
+
     apply_root_app
+    create_keycloak_database
     echo
-    
+
     log_info "Waiting for base services (PostgreSQL, Redis, Keycloak) to be ready..."
     sleep 30
     
