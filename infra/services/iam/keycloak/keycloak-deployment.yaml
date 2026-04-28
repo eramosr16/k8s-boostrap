@@ -25,7 +25,6 @@ spec:
           args:
             - start
             - --hostname-strict=false
-            - --hostname-strict-https=false
             - --http-port=8080
             - --hostname=keycloak.infra.svc.cluster.local
           env:
@@ -95,11 +94,6 @@ spec:
                 configMapKeyRef:
                   name: keycloak-config
                   key: KC_HOSTNAME_STRICT
-            - name: KC_HOSTNAME_STRICT_HTTPS
-              valueFrom:
-                configMapKeyRef:
-                  name: keycloak-config
-                  key: KC_HOSTNAME_STRICT_HTTPS
           securityContext:
             runAsNonRoot: true
             runAsUser: 10001
