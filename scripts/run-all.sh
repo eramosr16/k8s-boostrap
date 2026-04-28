@@ -916,21 +916,21 @@ poll_applications() {
 
 main() {
     log_info "=== K8s Cluster Bootstrap Script ==="
-    log_info "This script will install K3s, ArgoCD, create secrets, configure Keycloak, and verify service health."
+    log_info "This script will install K3s, collect secrets, install ArgoCD, configure Keycloak, and verify service health."
     echo
     
     install_k3s
     echo
 
-    reset_existing_argocd
-    install_argocd
-    install_argocd_cli
-    echo
-    
     prompt_secrets
     echo
     
     create_secrets
+    echo
+    
+    reset_existing_argocd
+    install_argocd
+    install_argocd_cli
     echo
     
     apply_root_app
