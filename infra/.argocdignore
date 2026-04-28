@@ -1,2 +1,3 @@
 services/gateway/traefik-config.yaml
 services/gateway/traefik-acme-secret.yaml
+services/**/*-secret*.yaml
