@@ -81,11 +81,11 @@ spec:
   volumeClaimTemplates:
     - metadata:
         name: postgres-data
-        spec:
-          accessModes:
-            - ReadWriteOnce
-          resources:
-            requests:
-              storage: 20Gi
-          storageClassName: standard
-          volumeMode: Filesystem
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 20Gi
+        storageClassName: standard
+        volumeMode: Filesystem
