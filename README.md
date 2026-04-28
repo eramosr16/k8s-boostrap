@@ -516,9 +516,9 @@ kube-score score \
   infra/services/observability/grafana/grafana-deployment.yaml \
   infra/services/observability/opentelemetry/opentelemetry-deployment.yaml \
   infra/services/observability/headlamp/headlamp-deployment.yaml \
-  infra/services/databases/postgres/postgres-deployment.yaml \
-  infra/services/databases/redis/redis-deployment.yaml \
-  infra/services/broker/rabbitmq/rabbitmq-deployment.yaml \
+  infra/services/databases/postgres/postgres-statefulset.yaml \
+  infra/services/databases/redis/redis-statefulset.yaml \
+  infra/services/broker/rabbitmq/rabbitmq-statefulset.yaml \
   infra/services/iam/keycloak/keycloak-deployment.yaml
 ```
 

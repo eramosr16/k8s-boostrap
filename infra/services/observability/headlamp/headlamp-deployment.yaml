@@ -15,7 +15,11 @@ spec:
     spec:
       serviceAccountName: headlamp
       volumes:
-        - name: headlamp-data
+        - name: headlamp-config
+          emptyDir: {}
+        - name: headlamp-cache
+          emptyDir: {}
+        - name: headlamp-plugins
           emptyDir: {}
         - name: headlamp-tmp
           emptyDir: {}
@@ -62,10 +66,14 @@ spec:
             fsGroup: 10001
             readOnlyRootFilesystem: true
           volumeMounts:
-            - name: headlamp-data
-              mountPath: /headlamp
             - name: headlamp-tmp
               mountPath: /tmp
+            - name: headlamp-config
+              mountPath: /headlamp/.config
+            - name: headlamp-cache
+              mountPath: /headlamp/.cache
+            - name: headlamp-plugins
+              mountPath: /headlamp/plugins
           readinessProbe:
             httpGet:
               scheme: HTTP
