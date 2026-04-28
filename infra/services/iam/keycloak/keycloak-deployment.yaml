@@ -25,8 +25,8 @@ spec:
           args:
             - start
             - --hostname-strict=false
-            - --http-port=8080
-            - --hostname=keycloak.infra.svc.cluster.local
+            - --http-enabled=true
+            - --db=postgres
           env:
             - name: KEYCLOAK_ADMIN_PASSWORD
               valueFrom:
@@ -35,28 +35,8 @@ spec:
                   key: KEYCLOAK_ADMIN_PASSWORD
             - name: KEYCLOAK_ADMIN
               value: admin
-            - name: KC_HOSTNAME
-              value: keycloak.infra.svc.cluster.local
-            - name: KC_BOOTSTRAP_ADMIN_USERNAME
-              valueFrom:
-                configMapKeyRef:
-                  name: keycloak-config
-                  key: KC_BOOTSTRAP_ADMIN_USERNAME
-            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: keycloak-secret
-                  key: KC_BOOTSTRAP_ADMIN_PASSWORD
             - name: KC_DB
-              valueFrom:
-                configMapKeyRef:
-                  name: keycloak-config
-                  key: KC_DB
-            - name: KC_DB_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: keycloak-config
-                  key: KC_DB_URL
+              value: postgres
             - name: KC_DB_USERNAME
               value: postgres
             - name: KC_DB_PASSWORD
@@ -64,50 +44,20 @@ spec:
                 secretKeyRef:
                   name: keycloak-secret
                   key: KEYCLOAK_DATABASE_PASSWORD
-            - name: KEYCLOAK_DATABASE_HOST
-              valueFrom:
-                configMapKeyRef:
-                  name: keycloak-config
-                  key: KEYCLOAK_DATABASE_HOST
-            - name: KEYCLOAK_DATABASE_PORT
-              valueFrom:
-                configMapKeyRef:
-                  name: keycloak-config
-                  key: KEYCLOAK_DATABASE_PORT
-            - name: KEYCLOAK_DATABASE_NAME
-              valueFrom:
-                configMapKeyRef:
-                  name: keycloak-config
-                  key: KEYCLOAK_DATABASE_NAME
-            - name: KEYCLOAK_DATABASE_USER
-              valueFrom:
-                configMapKeyRef:
-                  name: keycloak-config
-                  key: KEYCLOAK_DATABASE_USER
-            - name: KC_PROXY
-              valueFrom:
-                configMapKeyRef:
-                  name: keycloak-config
-                  key: KC_PROXY
-            - name: KC_HOSTNAME_STRICT
-              valueFrom:
-                configMapKeyRef:
-                  name: keycloak-config
-                  key: KC_HOSTNAME_STRICT
+            - name: KC_DB_URL
+              value: jdbc:postgresql://postgres.infra.svc.cluster.local:5432/keycloak
           securityContext:
             runAsNonRoot: true
             runAsUser: 10001
             runAsGroup: 10001
-            readOnlyRootFilesystem: true
+            readOnlyRootFilesystem: false
           resources:
             requests:
               cpu: 500m
               memory: 1Gi
-              ephemeral-storage: 100Mi
             limits:
               cpu: 2000m
               memory: 2Gi
-              ephemeral-storage: 500Mi
           livenessProbe:
             tcpSocket:
               port: 8080
@@ -116,6 +66,6 @@ spec:
           readinessProbe:
             httpGet:
               path: /health/ready
-              port: http
+              port: 8080
             initialDelaySeconds: 30
             periodSeconds: 5
