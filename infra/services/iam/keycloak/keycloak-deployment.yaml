@@ -24,7 +24,6 @@ spec:
               name: https
           args:
             - start
-            - --proxy=edge
             - --hostname-strict=false
             - --hostname-strict-https=false
             - --http-port=8080
