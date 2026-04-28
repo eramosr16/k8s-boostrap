@@ -203,7 +203,7 @@ create_keycloak_infra_realm() {
     
     if [ "$api_ready" = "false" ]; then
         for i in {1..30}; do
-            if kubectl exec -n infra "$keycloak_pod" -- curl -sf "$keycloak_url/realms/master" &> /dev/null; then
+            if kubectl exec -n infra "$keycloak_pod" -- curl -sf "$keycloak_url/realms/$KEYCLOAK_REALM" &> /dev/null; then
                 api_ready=true
                 break
             fi
@@ -232,7 +232,6 @@ create_keycloak_infra_realm() {
     
     local grafana_uri="https://${ROUTE_GRAFANA}.${CLUSTER_DOMAIN}"
     local argocd_uri="https://${ROUTE_ARGOCD}.${CLUSTER_DOMAIN}"
-    local headlamp_uri="https://${ROUTE_HEADLAMP}.${CLUSTER_DOMAIN}"
     local headlamp_uri="https://${ROUTE_HEADLAMP}.${CLUSTER_DOMAIN}"
     
     kubectl exec -n infra "$keycloak_pod" -- bash -c "
@@ -565,7 +564,7 @@ create_secrets() {
     
     kubectl create secret generic headlamp-oidc-secret -n infra \
         --from-literal=OIDC_CLIENT_ID=headlamp \
-        --from-literal=OIDC_ISSUER_URL="http://keycloak.infra.svc.cluster.local:8080/realms/master" \
+        --from-literal=OIDC_ISSUER_URL="http://keycloak.infra.svc.cluster.local:8080/realms/${KEYCLOAK_REALM}" \
         --dry-run=client -o yaml | kubectl apply -f -
     
     if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ]; then
@@ -718,7 +717,7 @@ configure_keycloak_clients() {
     export PATH="$KEYCLOAK_HOME/bin:$PATH"
     
     local keycloak_url="http://keycloak.infra.svc.cluster.local:8080"
-    local realm="master"
+    local realm="$KEYCLOAK_REALM"
     
     log_info "Waiting for Keycloak API to be ready..."
     local api_ready=false
@@ -733,13 +732,39 @@ configure_keycloak_clients() {
     if [ "$api_ready" = "false" ]; then
         log_warn "Keycloak API not ready yet, using alternative endpoint check..."
         for i in {1..30}; do
-            if kubectl exec -n infra "$keycloak_pod" -- curl -sf "$keycloak_url/realms/master" &> /dev/null; then
+            if kubectl exec -n infra "$keycloak_pod" -- curl -sf "$keycloak_url/realms/$KEYCLOAK_REALM" &> /dev/null; then
                 api_ready=true
                 break
             fi
             sleep 2
         done
     fi
+    
+    log_info "Creating Keycloak realm if not exists..."
+    
+    kubectl exec -n infra "$keycloak_pod" -- bash -c "
+        export KEYCLOAK_HOME='/opt/keycloak'
+        export PATH=\"\$KEYCLOAK_HOME/bin:\$PATH\"
+        
+        kcadm config credentials \
+            --server '$keycloak_url' \
+            --realm master \
+            --user admin \
+            --password '$KEYCLOAK_ADMIN_PASSWORD'
+        
+        echo 'Checking if realm $KEYCLOAK_REALM exists...'
+        if ! kcadm get realms/$KEYCLOAK_REALM &>/dev/null; then
+            echo 'Creating realm $KEYCLOAK_REALM...'
+            kcadm create realms \
+                -s realm=$KEYCLOAK_REALM \
+                -s enabled=true \
+                -s loginWithEmailAllowed=false \
+                -s duplicateEmailsAllowed=true \
+                -s resetPasswordAllowed=false
+        else
+            echo 'Realm $KEYCLOAK_REALM already exists'
+        fi
+    "
     
     log_info "Creating Keycloak clients using kcadm..."
     
@@ -849,7 +874,7 @@ configure_keycloak_clients() {
         kubectl create secret generic headlamp-oidc-secret -n infra \
             --from-literal=OIDC_CLIENT_ID=headlamp \
             --from-literal=OIDC_CLIENT_SECRET="$headlamp_secret" \
-            --from-literal=OIDC_ISSUER_URL="$keycloak_url/realms/master" \
+            --from-literal=OIDC_ISSUER_URL="$keycloak_url/realms/$KEYCLOAK_REALM" \
             --dry-run=client -o yaml | kubectl apply -f -
         log_info "Headlamp OIDC secret created with Keycloak credentials."
     else
