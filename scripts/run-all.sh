@@ -459,6 +459,8 @@ readonly CREDENTIAL_PROMPTS=(
     "Let's Encrypt Email|LETS_ENCRYPT_EMAIL|Enter Let's Encrypt email for Traefik ACME|false"
     "AWS Access Key ID|AWS_ACCESS_KEY_ID|Enter AWS access key (or press Enter to skip)|true"
     "AWS Secret Access Key|AWS_SECRET_ACCESS_KEY|Enter AWS secret key (or press Enter to skip)|true"
+    "AWS Account ID|AWS_ACCOUNT_ID|Enter AWS account ID (or press Enter to skip)|true"
+    "AWS Region|AWS_REGION|Enter AWS region (default us-east-1 if unset)|true"
 )
 
 prompt_secrets() {
@@ -481,6 +483,12 @@ prompt_secrets() {
     if [ -z "$TRAEFIK_EMAIL" ] && [ -n "$LETS_ENCRYPT_EMAIL" ]; then
         TRAEFIK_EMAIL="$LETS_ENCRYPT_EMAIL"
         export TRAEFIK_EMAIL
+    fi
+
+    if [ -z "$AWS_REGION" ]; then
+        AWS_REGION="us-east-1"
+        export AWS_REGION
+        log_info "AWS_REGION not set; defaulting to us-east-1"
     fi
 }
 
@@ -517,7 +525,19 @@ create_secrets() {
             --from-literal=aws-secret-access-key="$AWS_SECRET_ACCESS_KEY" \
             --dry-run=client -o yaml | kubectl apply -f -
     fi
-    
+
+    if [ -n "$AWS_ACCOUNT_ID" ] && [ -n "$AWS_REGION" ] && [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ]; then
+        kubectl create secret generic ecr-refresh-aws-creds -n infra \
+            --from-literal=AWS_ACCOUNT_ID="$AWS_ACCOUNT_ID" \
+            --from-literal=AWS_REGION="$AWS_REGION" \
+            --from-literal=AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
+            --from-literal=AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
+            --dry-run=client -o yaml | kubectl apply -f -
+        log_info "ECR refresh credentials secret created."
+    else
+        log_warn "Skipping ecr-refresh-aws-creds secret creation; AWS credentials incomplete."
+    fi
+
     log_info "Secrets created."
 }
 

@@ -15,16 +15,16 @@ spec:
     spec:
       containers:
         - name: prometheus
-          image: prom/prometheus:v2.45.0
+          image: prom/prometheus:v3-distroless
           imagePullPolicy: Always
           ports:
             - containerPort: 9090
               name: http
           args:
-            - '--config.file=/etc/prometheus/prometheus.yml'
-            - '--storage.tsdb.path=/prometheus'
-            - '--storage.tsdb.retention.time=30d'
-            - '--web.enable-lifecycle'
+            - "--config.file=/etc/prometheus/prometheus.yml"
+            - "--storage.tsdb.path=/prometheus"
+            - "--storage.tsdb.retention.time=30d"
+            - "--web.enable-lifecycle"
           volumeMounts:
             - name: prometheus-config
               mountPath: /etc/prometheus

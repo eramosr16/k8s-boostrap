@@ -9,7 +9,7 @@ This folder contains Kubernetes manifests to configure registry authentication f
 | `aws-ecr-secret.yaml` | ✅ Yes | Initial K8s Secret with ECR credentials |
 | `registry-config.yaml` | ✅ Yes | ServiceAccount with ImagePullSecret reference |
 | `ecr-credential-provider.yaml` | ✅ Yes | CronJob `refresh-ecr-registry-secret` (plus RBAC/ServiceAccount) that refreshes the `ecr-registry` pull secret every 10 minutes |
-| `registry-config.env` | ❌ No | AWS credentials (add to .gitignore) |
+| `registry-config.env.example` | ❌ No | Template for AWS credentials (copy to `registry-config.env` before you create the `ecr-refresh-aws-creds` secret) |
 
 ## Prerequisites
 
@@ -21,7 +21,7 @@ This folder contains Kubernetes manifests to configure registry authentication f
 ### 1. Create registry-config.env
 
 ```bash
-cp registry-config.env.template registry-config.env
+cp registry-config.env.example registry-config.env
 # Edit with your actual AWS credentials
 ```
 
@@ -35,7 +35,7 @@ Edit `registry-config.env` with your AWS details:
 
 ### 3. Create the refresh secret
 
-Once the env file has the correct values, create the credentials secret that the CronJob consumes:
+Once the env file has the correct values, create the credentials secret that the CronJob consumes (skip this if `scripts/run-all.sh` already created `ecr-refresh-aws-creds` because you provided the AWS credentials there):
 
 ```bash
 kubectl create secret generic ecr-refresh-aws-creds \
@@ -68,7 +68,7 @@ The `refresh-ecr-registry-secret` CronJob runs every 10 minutes in the `infra` n
 
 ## Manual Rotation (Fallback)
 
-If the credential provider fails:
+If the credential rotation CronJob fails:
 
 1. Regenerate ECR token:
    ```bash
