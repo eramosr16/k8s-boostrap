@@ -559,18 +559,20 @@ apply_root_app() {
 render_template() {
     local template="$1"
     python3 - "$template" <<'PY'
-import os
-import re
-import sys
-from pathlib import Path
+    import os
+    import re
+    import sys
+    from pathlib import Path
 
-text = Path(sys.argv[1]).read_text()
+    text = Path(sys.argv[1]).read_text()
+    # normalize Windows-style line endings to avoid control characters for kubectl
+    text = text.replace('\r', '')
 
-def substitute(match):
-    key = match.group(1)
-    return os.environ.get(key, match.group(0))
+    def substitute(match):
+        key = match.group(1)
+        return os.environ.get(key, match.group(0))
 
-print(re.sub(r"\{\{([A-Z0-9_]+)\}\}", substitute, text))
+    print(re.sub(r"\{\{([A-Z0-9_]+)\}\}", substitute, text))
 PY
 }
 
