@@ -487,7 +487,6 @@ readonly CREDENTIAL_PROMPTS=(
     "RabbitMQ Username|RABBITMQ_DEFAULT_USER|Enter RabbitMQ username|false"
     "RabbitMQ Password|RABBITMQ_DEFAULT_PASS|Enter RabbitMQ password|false"
     "Keycloak Admin Password|KEYCLOAK_ADMIN_PASSWORD|Enter Keycloak admin password|false"
-    "Keycloak Database Password|KEYCLOAK_DATABASE_PASSWORD|Enter Keycloak database password|false"
     "Let's Encrypt Email|LETS_ENCRYPT_EMAIL|Enter Let's Encrypt email for Traefik ACME|false"
     "AWS Access Key ID|AWS_ACCESS_KEY_ID|Enter AWS access key (or press Enter to skip)|true"
     "AWS Secret Access Key|AWS_SECRET_ACCESS_KEY|Enter AWS secret key (or press Enter to skip)|true"
@@ -511,6 +510,10 @@ prompt_secrets() {
     done
 
     log_info "Credentials collected."
+
+    KEYCLOAK_DATABASE_PASSWORD="${POSTGRES_PASSWORD}"
+    export KEYCLOAK_DATABASE_PASSWORD
+    log_info "Keycloak database password aligned with PostgreSQL password."
 
     if [ -z "$TRAEFIK_EMAIL" ] && [ -n "$LETS_ENCRYPT_EMAIL" ]; then
         TRAEFIK_EMAIL="$LETS_ENCRYPT_EMAIL"
@@ -550,7 +553,7 @@ create_secrets() {
 
     kubectl create secret generic keycloak-secret -n infra \
         --from-literal=KEYCLOAK_ADMIN_PASSWORD="$KEYCLOAK_ADMIN_PASSWORD" \
-        --from-literal=KEYCLOAK_DATABASE_PASSWORD="$KEYCLOAK_DATABASE_PASSWORD" \
+        --from-literal=KC_BOOTSTRAP_ADMIN_USERNAME="admin" \
         --from-literal=KC_BOOTSTRAP_ADMIN_PASSWORD="$KEYCLOAK_ADMIN_PASSWORD" \
         --dry-run=client -o yaml | kubectl apply -f -
     

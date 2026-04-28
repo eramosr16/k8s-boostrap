@@ -30,6 +30,9 @@ Changes are stored in `openspec/changes/` and organized in an `archive/` subdire
 
 ### Recent Updates
 
+- **2026-04-29**: Ensured Keycloak reuses PostgreSQL credentials for its database connection so the optimized image can authenticate (`align-keycloak-db-creds`).
+- **2026-04-29**: Updated the Keycloak bootstrap env vars to use `KC_BOOTSTRAP_ADMIN_*`, matching the optimized image’s expectations (change: `align-keycloak-kc-bootstrap-vars`).
+- **2026-04-28**: Ensured the Keycloak Bitnami bootstrap env vars point at the right secrets so the admin user comes up automatically (change: `align-keycloak-bootstrap-env`).
 - **2026-04-28**: Updated the Keycloak IAM service manifest to use the optimized Bitnami image and documented the change (change: `update-keycloak-service`).
 - **2026-04-28**: Removed placeholder image overrides from `config.yaml` and the bootstrap script so ArgoCD-manifests drive service images (change: `remove-config-image-placeholders`).
 - **2026-04-27**: Removed the unused `hello-world` application from `infra/applications/` (change: `remove-hello-world-app`).
@@ -424,12 +427,12 @@ Secrets use environment variable placeholders that are replaced during deploymen
 
 | Service    | Secret File          | Environment Variable                                    |
 | ---------- | -------------------- | ------------------------------------------------------- |
-| PostgreSQL | postgres-secret.yaml | `POSTGRES_PASSWORD`                                     |
+| PostgreSQL | postgres-secret.yaml | `POSTGRES_PASSWORD` (also used by Keycloak)             |
 | Redis      | redis-secret.yaml    | `REDIS_PASSWORD`                                        |
 | RabbitMQ   | rabbitmq-secret.yaml | `RABBITMQ_DEFAULT_USER`, `RABBITMQ_DEFAULT_PASS`        |
 | Prometheus | -                    | -                                                       |
 | Grafana    | grafana-secret.yaml  | `GRAFANA_OIDC_CLIENT_SECRET`, `GRAFANA_ADMIN_PASSWORD`  |
-| Keycloak   | keycloak-secret.yaml | `KEYCLOAK_ADMIN_PASSWORD`, `KEYCLOAK_DATABASE_PASSWORD` |
+| Keycloak   | keycloak-secret.yaml | `KEYCLOAK_ADMIN_PASSWORD`, `KC_BOOTSTRAP_ADMIN_USERNAME`, `KC_BOOTSTRAP_ADMIN_PASSWORD` |
 | Headlamp   | -                    | - (uses service account token)                          |
 
 `scripts/run-all.sh` collects these secrets interactively via `prompt_secrets()` and expects you to type them or export them before running the script. Do not store these credentials in `config.yaml` to avoid leaking secrets into the repository history.
@@ -455,7 +458,9 @@ export GRAFANA_ADMIN_PASSWORD="your-secure-password"
 
 # For Keycloak
 export KEYCLOAK_ADMIN_PASSWORD="your-secure-password"
-export KEYCLOAK_DATABASE_PASSWORD="your-secure-password"
+export KC_BOOTSTRAP_ADMIN_USERNAME="admin"
+export KC_BOOTSTRAP_ADMIN_PASSWORD="your-secure-password"
+# The Keycloak database password is the same as $POSTGRES_PASSWORD
 ```
 
 Then update the secret file with the actual password or use a tool like `envsubst` to replace the placeholder during deployment.

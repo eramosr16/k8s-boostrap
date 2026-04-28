@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: keycloak
-          image: docker.io/bitnami/keycloak:latest
+          image: camunda/keycloak:26.3.3
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
@@ -23,24 +23,24 @@ spec:
             - containerPort: 8443
               name: https
           env:
-            - name: KEYCLOAK_ADMIN_PASSWORD
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              value: admin
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: keycloak-secret
-                  key: KEYCLOAK_ADMIN_PASSWORD
-            - name: KEYCLOAK_ADMIN_USER
-              value: admin
+                  key: KC_BOOTSTRAP_ADMIN_PASSWORD
             - name: KEYCLOAK_DATABASE_HOST
-              value: postgresql
+              value: postgres.infra.svc.cluster.local
             - name: KEYCLOAK_DATABASE_NAME
               value: keycloak
             - name: KEYCLOAK_DATABASE_USER
-              value: bn_keycloak
+              value: postgres
             - name: KEYCLOAK_DATABASE_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: keycloak-secret
-                  key: KEYCLOAK_DATABASE_PASSWORD
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
           securityContext:
             # Run as root to allow Keycloak to write to /opt/keycloak during startup
             runAsUser: 0

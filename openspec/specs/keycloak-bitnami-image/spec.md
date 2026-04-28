@@ -8,8 +8,8 @@ The Keycloak deployment under `infra/services/iam/keycloak` SHALL use `docker.io
 - **THEN** the resulting pod starts a container using `docker.io/bitnami/keycloak:latest` with `KEYCLOAK_DATABASE_HOST=postgresql`, `KEYCLOAK_DATABASE_NAME=bitnami_keycloak`, and `KEYCLOAK_DATABASE_USER=bn_keycloak` and the container becomes ready within readinessProbe thresholds.
 
 ### Requirement: Existing secrets provide credentials
-The deployment SHALL continue to source `KEYCLOAK_ADMIN_PASSWORD` and `KEYCLOAK_DATABASE_PASSWORD` from the existing `keycloak-secret` so no new plaintext credentials are introduced.
+The deployment SHALL continue to source `KEYCLOAK_ADMIN_PASSWORD` from `keycloak-secret` and `KEYCLOAK_DATABASE_PASSWORD` from `postgres-secret` so no new plaintext credentials are introduced and the database authentication always matches the authoritative secret.
 
 #### Scenario: Secret-backed credentials persist
 - **WHEN** the Bitnami-enabled pod is created
-- **THEN** it mounts `keycloak-secret` and the container logs show that it read the admin and database passwords without requiring a manual update to the ArgoCD application.
+- **THEN** it mounts both `keycloak-secret` (for admin credentials) and `postgres-secret` (for database credentials) and the container logs show that it read those values without requiring a manual update to the ArgoCD application.
