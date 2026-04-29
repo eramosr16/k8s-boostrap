@@ -32,6 +32,7 @@ Changes are stored in `openspec/changes/` and organized in an `archive/` subdire
 
 - **2026-04-29**: Enabled Keycloak health endpoints at port 9000 so Kubernetes probes can succeed and the service becomes ready (`enable-keycloak-healthchecks`).
 - **2026-04-29**: Automated creation of the Keycloak database during bootstrap so Postgres credentials stay in sync (`bootstrap-keycloak-db`).
+- **2026-04-29**: Documented how to store GitHub credentials so ArgoCD can access private repos (`argocd-private-github-creds`).
 - **2026-04-29**: Ensured Keycloak reuses PostgreSQL credentials for its database connection so the optimized image can authenticate (`align-keycloak-db-creds`).
 - **2026-04-29**: Updated the Keycloak bootstrap env vars to use `KC_BOOTSTRAP_ADMIN_*`, matching the optimized image’s expectations (change: `align-keycloak-kc-bootstrap-vars`).
 - **2026-04-28**: Ensured the Keycloak Bitnami bootstrap env vars point at the right secrets so the admin user comes up automatically (change: `align-keycloak-bootstrap-env`).
@@ -505,6 +506,20 @@ Create the following groups in the master realm:
 6. Web Origins: `https://argocd.mydomain.com`
 7. Add client scope for groups with Token Mapper (Group Membership)
 8. Create `argocd-admins` group and add admin users
+
+## ArgoCD Repository Credentials
+
+ArgoCD stores Git repository credentials in secrets within the `argocd` namespace. To let ArgoCD pull from private GitHub repositories, create a secret such as:
+
+```bash
+kubectl create secret generic argocd-private-github \
+  -n argocd \
+  --from-literal=username=git \
+  --from-literal=password="<github-pat>" \
+  --dry-run=client -o yaml | kubectl apply -f -
+```
+
+Limit the token scope to the minimum required (`repo` read access) and rotate it by re-running the command with a new PAT. Update the ArgoCD repository manifest (e.g., `infra/services/observability/argocd/argocd-cm.yaml`) so the entry for the private repo points at `argocd-private-github` and does not inline credentials.
 
 ### Keycloak Health Checks
 

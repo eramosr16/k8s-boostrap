@@ -19,3 +19,11 @@ data:
       - profile
       - email
       - groups
+  repositories: |
+    - url: https://github.com/your-org/private-repo
+      usernameSecret:
+        name: argocd-private-github
+        key: username
+      passwordSecret:
+        name: argocd-private-github
+        key: password
