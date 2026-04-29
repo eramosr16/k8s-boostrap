@@ -7,7 +7,7 @@ spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`metrics.mydomain.com`)
+    - match: Host(`grafana.mydomain.com`)
       kind: Rule
       middlewares:
         - name: security-headers

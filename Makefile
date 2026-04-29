@@ -1,4 +1,4 @@
-.PHONY: venv install clean bootstrap install-argocd run-all setup-oauth verify-images
+.PHONY: venv install clean bootstrap install-argocd services setup-oauth setup-routes post-install verify-images
 
 PYTHON := python3
 VENV_DIR := .venv
@@ -24,11 +24,19 @@ bootstrap: install
 install-argocd: install
 	$(BIN)/python scripts/install_argocd.py
 
-run-all: install
-	$(BIN)/python scripts/run_all.py
+services: install
+	$(BIN)/python scripts/services.py
 
 setup-oauth: install
 	$(BIN)/python scripts/setup_oauth.py
+
+setup-routes: install
+	$(BIN)/python scripts/setup_routes.py $(ARGS)
+
+post-install: install
+	$(BIN)/python scripts/services.py
+	$(BIN)/python scripts/setup_oauth.py
+	$(BIN)/python scripts/setup_routes.py
 
 verify-images: install
 	$(BIN)/python scripts/verify_images.py $(ARGS)
@@ -39,7 +47,9 @@ help:
 	@echo "  install       - Install dependencies"
 	@echo "  bootstrap     - Run K3s bootstrap script"
 	@echo "  install-argocd - Install ArgoCD"
-	@echo "  run-all       - Run full bootstrap process"
+	@echo "  services      - Run full bootstrap process"
 	@echo "  setup-oauth   - Setup OAuth with Keycloak"
+	@echo "  setup-routes  - Patch Traefik IngressRoute hostnames from config.yaml"
+	@echo "  post-install  - Run services + oauth + routes (full post-install sequence)"
 	@echo "  verify-images - Verify container images (use ARGS for extra args)"
 	@echo "  clean         - Remove virtual environment and cache files"

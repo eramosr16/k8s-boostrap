@@ -16,3 +16,10 @@ spec:
     automated:
       prune: true
       selfHeal: true
+  ignoreDifferences:
+    - group: traefik.io
+      kind: IngressRoute
+      name: argocd
+      namespace: argocd
+      jsonPointers:
+        - /spec/routes

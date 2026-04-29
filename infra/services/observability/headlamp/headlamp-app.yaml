@@ -16,3 +16,9 @@ spec:
     automated:
       prune: true
       selfHeal: true
+  ignoreDifferences:
+    - group: traefik.io
+      kind: IngressRoute
+      name: headlamp
+      jsonPointers:
+        - /spec/routes

@@ -1,5 +1,5 @@
 cluster:
-  domain: cluster.local
+  domain: staraps.com
   region: us-east-1
   # IP for the auth.<cluster-domain> alias (match the ClusterIP in the infra namespace)
   hostIP: 192.168.1.85

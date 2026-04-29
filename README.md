@@ -124,7 +124,29 @@ repoURL: http://localhost:8080/k8s.git
 
 ## Quick Start - Automated Bootstrap
 
-The easiest way to set up the cluster is using the automated `run-all.sh` script. It installs K3s, ArgoCD, prompts for all credentials, creates secrets, configures Keycloak clients, and verifies service health.
+The easiest way to set up the cluster is using the `make` targets. The full flow is:
+
+```bash
+# 1. Bootstrap K3s and kubectl
+make bootstrap
+
+# 2. Install ArgoCD
+make install-argocd
+
+# 3. Run full service bootstrap (secrets, ArgoCD sync, Keycloak setup)
+make services
+
+# 4. After ArgoCD has synced all services, run the post-install sequence:
+#    - Configures Keycloak OAuth clients (Grafana, ArgoCD, Headlamp)
+#    - Patches Traefik IngressRoute hostnames to match config.yaml domain
+make post-install
+
+# Or run each step individually:
+make setup-oauth          # Keycloak OAuth clients only
+make setup-routes         # IngressRoute hostname patching only
+make setup-routes ARGS="--verify-only"   # Check current route state
+make setup-routes ARGS="--dry-run"       # Preview changes without applying
+```
 
 ### Prerequisites
 
@@ -133,26 +155,7 @@ The easiest way to set up the cluster is using the automated `run-all.sh` script
 - Internet connection
 - Git clone of this repository
 
-### One-Command Setup
-
-```bash
-./scripts/run-all.sh
-```
-
-The bootstrap script now installs the `argocd` CLI (`/usr/local/bin/argocd`) if it is missing, so you can run `argocd app list` right after bootstrap completes. Override the downloaded version with `ARGOCD_CLI_VERSION` if needed.
-
-Image tags are defined directly in the ArgoCD-managed manifests, so the bootstrap script no longer overwrites them. Update those manifests instead of `config.yaml` when you need to change versions.
-
-The script will prompt you for credentials (passwords are hidden for security):
-
-1. **PostgreSQL** - Database password
-2. **Redis** - Cache password
-3. **RabbitMQ** - Username and password
-4. **Keycloak** - Admin password and database password
-5. **Let's Encrypt** - Email for TLS certificates
-6. **AWS** (optional) - Access key and secret for ECR
-
-### What the Script Does
+### What `make services` Does
 
 1. **Installs K3s** - Creates Kubernetes cluster
 2. **Installs ArgoCD** - GitOps deployment tool
@@ -162,9 +165,41 @@ The script will prompt you for credentials (passwords are hidden for security):
 6. **Configures Keycloak clients** - Creates OIDC clients for Grafana and ArgoCD automatically
 7. **Polls for health** - Waits until all services are healthy (timeout: 5 minutes)
 
+The bootstrap script installs the `argocd` CLI (`/usr/local/bin/argocd`) if it is missing. Override the downloaded version with `ARGOCD_CLI_VERSION` if needed.
+
+Image tags are defined directly in the ArgoCD-managed manifests. Update those manifests instead of `config.yaml` when you need to change versions.
+
 ### Accessing Services
 
-After successful bootstrap:
+#### Via Traefik (HTTPS, Let's Encrypt — after `make setup-routes`)
+
+Routes are defined by `routes.*` prefixes in `config.yaml` combined with `cluster.domain`. Run `make setup-routes` after the cluster is up to patch the live IngressRoutes.
+
+| Service  | URL                          | Notes                          |
+| -------- | ---------------------------- | ------------------------------ |
+| ArgoCD   | `https://argocd.staraps.com` | GitOps UI                      |
+| Grafana  | `https://grafana.staraps.com`| Metrics & dashboards           |
+| Headlamp | `https://infra.staraps.com`  | Kubernetes dashboard (OIDC)    |
+| Keycloak | `https://auth.staraps.com`   | IAM / SSO admin console        |
+
+> Domain and subdomain prefixes are configured in `config.yaml` under `cluster.domain` and `routes.*`.
+> The IngressRoute YAML files ship with `*.mydomain.com` as a safe default so ArgoCD applies them
+> without errors. Run `make setup-routes` to patch them to your real domain.
+
+#### Via NodePort (direct internal network access)
+
+These ports are accessible directly on the node IP without going through Traefik:
+
+| Service      | NodePort | Protocol | Notes                                |
+| ------------ | -------- | -------- | ------------------------------------ |
+| PostgreSQL   | `30432`  | TCP      | Direct DB access from internal network |
+| Redis        | `30379`  | TCP      | Direct cache access                  |
+| ArgoCD       | `30080`  | HTTP     | ArgoCD server (unauthenticated port) |
+| Headlamp     | `30466`  | HTTP     | Kubernetes dashboard                 |
+| Traefik HTTP | `30618`  | HTTP     | Traefik entrypoint (web)             |
+| Traefik HTTPS| `32084`  | HTTPS    | Traefik entrypoint (websecure)       |
+
+#### Via `kubectl port-forward` (local dev access)
 
 ```bash
 # ArgoCD UI
@@ -345,7 +380,7 @@ The `run-all.sh` script will automatically use these values when deploying.
 
 Services validate tokens faster when `auth.<cluster-domain>` resolves to the internal Keycloak IP. Set `cluster.hostIP` in `config.yaml` to match the Keycloak service ClusterIP (`kubectl get svc keycloak -n infra -o jsonpath='{.spec.clusterIP}'`).
 
-- The bootstrap script (`scripts/run-all.sh`) reads this value, writes `<cluster.hostIP> auth.<cluster-domain>` into `/etc/coredns/NodeHosts`, and restarts CoreDNS to apply the alias.
+- The bootstrap script (`scripts/services.py`) reads this value, writes `<cluster.hostIP> auth.<cluster-domain>` into `/etc/coredns/NodeHosts`, and restarts CoreDNS to apply the alias.
 - `infra/services/registry/coredns-config.yaml` seeds the GitOps-managed CoreDNS `ConfigMap` with the same entry. Update that file whenever `cluster.hostIP` changes so the git repo and runtime are in sync.
 
 If you change `cluster.domain`, update the alias entry in `infra/services/registry/coredns-config.yaml` and rerun the bootstrap script so `/etc/coredns/NodeHosts` reflects the new hostname.
@@ -439,19 +474,16 @@ Secrets use environment variable placeholders that are replaced during deploymen
 | Keycloak   | keycloak-secret.yaml | `KEYCLOAK_ADMIN_PASSWORD`, `KC_BOOTSTRAP_ADMIN_USERNAME`, `KC_BOOTSTRAP_ADMIN_PASSWORD` |
 | Headlamp   | -                    | - (uses service account token)                          |
 
-`scripts/run-all.sh` collects these secrets interactively via `prompt_secrets()` and expects you to type them or export them before running the script. Do not store these credentials in `config.yaml` to avoid leaking secrets into the repository history.
+`scripts/services.py` collects these secrets interactively via `prompt_secrets()` and expects you to type them or export them before running the script. Do not store these credentials in `config.yaml` to avoid leaking secrets into the repository history.
 
 ## Recovering OAuth Setup
 
-If the bootstrap run stops when Keycloak or PostgreSQL are unavailable, you can run the targeted recovery script after the cluster and database pods become healthy:
+If the bootstrap run stops when Keycloak or PostgreSQL are unavailable, run the recovery steps after the cluster and database pods become healthy:
 
 ```bash
-KEYCLOAK_ADMIN_PASSWORD="<your-password>" ./scripts/setup-oauth-after-bootstrap.sh
+make setup-oauth   # Recreates Keycloak realm, clients, and K8s secrets
+make setup-routes  # Re-patches Traefik IngressRoute hostnames
 ```
-
-The script reads `KEYCLOAK_ADMIN_PASSWORD` (either exported or sourced from `.env`), derives the cluster domain and route names from `config.yaml` when available, waits for Keycloak to become ready, recreates the `infra` realm plus Grafana/ArgoCD/Headlamp clients, and refreshes the Kubernetes secrets these services consume.
-
-Keep your `.env` file up-to-date so the script picks up the same credential values you used during the original bootstrap.
 
 ### Setting Passwords
 
@@ -491,7 +523,7 @@ Then update the secret file with the actual password or use a tool like `envsubs
 
 Before deploying services, ensure the following are configured:
 
-- [ ] **DNS**: `auth.mydomain.com`, `argocd.mydomain.com`, `metrics.mydomain.com`, `logs.mydomain.com`, and `headlamp.mydomain.com` point to your cluster's external IP
+- [ ] **DNS**: `argocd.<domain>`, `grafana.<domain>`, `auth.<domain>`, and `infra.<domain>` point to your cluster's external IP (subdomain prefixes are set via `routes.*` in `config.yaml`)
 - [ ] **Let's Encrypt**: Email configured in `config.yaml`
 - [ ] **Secrets**: All passwords set in respective secret files
 - [ ] **Keycloak Client**: Grafana and ArgoCD OIDC clients configured in Keycloak master realm
