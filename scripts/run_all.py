@@ -383,9 +383,6 @@ def prompt_secrets():
 
     log_info("Credentials collected.")
 
-    os.environ["KEYCLOAK_DATABASE_PASSWORD"] = os.environ.get("POSTGRES_PASSWORD", "")
-    log_info("Keycloak database password aligned with PostgreSQL password.")
-
     if not os.environ.get("TRAEFIK_EMAIL") and os.environ.get("LETS_ENCRYPT_EMAIL"):
         TRAEFIK_EMAIL = os.environ["LETS_ENCRYPT_EMAIL"]
         os.environ["TRAEFIK_EMAIL"] = TRAEFIK_EMAIL
@@ -695,16 +692,16 @@ def create_keycloak_infra_realm():
     log_info(f"Creating {KEYCLOAK_REALM} realm...")
 
     kc_script = f"""
-export KEYCLOAK_HOME='/opt/keycloak'
+export KEYCLOAK_HOME='/opt/bitnami/keycloak'
 export PATH="$KEYCLOAK_HOME/bin:$PATH"
 REALM='{KEYCLOAK_REALM}'
 
-kcadm config credentials --server '{keycloak_url}' --realm master --user admin --password '{os.environ.get('KEYCLOAK_ADMIN_PASSWORD', '')}' || exit 1
+kcadm.sh config credentials --server '{keycloak_url}' --realm master --user admin --password '{os.environ.get('KEYCLOAK_ADMIN_PASSWORD', '')}' || exit 1
 
-if kcadm get realms/$REALM &> /dev/null; then
+if kcadm.sh get realms/$REALM &> /dev/null; then
     echo "$REALM realm already exists"
 else
-    kcadm create realms -s realm=$REALM -s enabled=true -s loginWithEmailAllowed=false -s duplicateEmailsAllowed=true -s resetPasswordAllowed=false
+    kcadm.sh create realms -s realm=$REALM -s enabled=true -s loginWithEmailAllowed=false -s duplicateEmailsAllowed=true -s resetPasswordAllowed=false
     echo "$REALM realm created"
 fi
 """
@@ -717,23 +714,23 @@ fi
     headlamp_uri = f"https://{ROUTE_HEADLAMP}.{CLUSTER_DOMAIN}"
 
     clients_script = f"""
-export KEYCLOAK_HOME='/opt/keycloak'
+export KEYCLOAK_HOME='/opt/bitnami/keycloak'
 export PATH="$KEYCLOAK_HOME/bin:$PATH"
 REALM='{KEYCLOAK_REALM}'
 
-kcadm config credentials --server '{keycloak_url}' --realm master --user admin --password '{os.environ.get('KEYCLOAK_ADMIN_PASSWORD', '')}' || exit 1
+kcadm.sh config credentials --server '{keycloak_url}' --realm master --user admin --password '{os.environ.get('KEYCLOAK_ADMIN_PASSWORD', '')}' || exit 1
 
 echo 'Creating k3s-api client...'
-kcadm create clients -r '$REALM' -s clientId=k3s-api -s enabled=true -s protocol=openid-connect -s publicClient=false -s serviceAccountsEnabled=true -s standardFlowEnabled=false -s directAccessGrantsEnabled=true
+kcadm.sh create clients -r '$REALM' -s clientId=k3s-api -s enabled=true -s protocol=openid-connect -s publicClient=false -s serviceAccountsEnabled=true -s standardFlowEnabled=false -s directAccessGrantsEnabled=true
 
 echo 'Creating Grafana client...'
-kcadm create clients -r '$REALM' -s clientId=$REALM-grafana -s enabled=true -s protocol=openid-connect -s publicClient=false -s standardFlowEnabled=true -s 'redirectUris=["http://localhost:3000/*","http://grafana.infra.svc.cluster.local:3000/*"]' -s webOrigins='["+"]' -s serviceAccountsEnabled=true || true
+kcadm.sh create clients -r '$REALM' -s clientId=$REALM-grafana -s enabled=true -s protocol=openid-connect -s publicClient=false -s standardFlowEnabled=true -s 'redirectUris=["http://localhost:3000/*","http://grafana.infra.svc.cluster.local:3000/*"]' -s webOrigins='["+"]' -s serviceAccountsEnabled=true || true
 
 echo 'Creating ArgoCD client...'
-kcadm create clients -r '$REALM' -s clientId=$REALM-argocd -s enabled=true -s protocol=openid-connect -s publicClient=false -s standardFlowEnabled=true -s 'redirectUris=["http://localhost:8080/*","http://argocd-server.argocd.svc.cluster.local:8080/*"]' -s webOrigins='["+"]' -s serviceAccountsEnabled=true || true
+kcadm.sh create clients -r '$REALM' -s clientId=$REALM-argocd -s enabled=true -s protocol=openid-connect -s publicClient=false -s standardFlowEnabled=true -s 'redirectUris=["http://localhost:8080/*","http://argocd-server.argocd.svc.cluster.local:8080/*"]' -s webOrigins='["+"]' -s serviceAccountsEnabled=true || true
 
 echo 'Creating Headlamp client...'
-kcadm create clients -r '$REALM' -s clientId=$REALM-headlamp -s enabled=true -s protocol=openid-connect -s publicClient=false -s standardFlowEnabled=true -s 'redirectUris=["http://localhost:4466/*","http://headlamp.infra.svc.cluster.local/*"]' -s webOrigins='["+"]' -s serviceAccountsEnabled=true || true
+kcadm.sh create clients -r '$REALM' -s clientId=$REALM-headlamp -s enabled=true -s protocol=openid-connect -s publicClient=false -s standardFlowEnabled=true -s 'redirectUris=["http://localhost:4466/*","http://headlamp.infra.svc.cluster.local/*"]' -s webOrigins='["+"]' -s serviceAccountsEnabled=true || true
 
 echo "$REALM clients created"
 """
@@ -805,15 +802,15 @@ def configure_keycloak_clients():
     # Setup realm if not exists
     log_info("Creating Keycloak realm if not exists...")
     realm_script = f"""
-export KEYCLOAK_HOME='/opt/keycloak'
+export KEYCLOAK_HOME='/opt/bitnami/keycloak'
 export PATH="$KEYCLOAK_HOME/bin:$PATH"
 
-kcadm config credentials --server '{keycloak_url}' --realm master --user admin --password '{os.environ.get('KEYCLOAK_ADMIN_PASSWORD', '')}'
+kcadm.sh config credentials --server '{keycloak_url}' --realm master --user admin --password '{os.environ.get('KEYCLOAK_ADMIN_PASSWORD', '')}'
 
 echo 'Checking if realm {realm} exists...'
-if ! kcadm get realms/{realm} &>/dev/null; then
+if ! kcadm.sh get realms/{realm} &>/dev/null; then
     echo 'Creating realm {realm}...'
-    kcadm create realms -s realm={realm} -s enabled=true -s loginWithEmailAllowed=false -s duplicateEmailsAllowed=true -s resetPasswordAllowed=false
+    kcadm.sh create realms -s realm={realm} -s enabled=true -s loginWithEmailAllowed=false -s duplicateEmailsAllowed=true -s resetPasswordAllowed=false
 else
     echo 'Realm {realm} already exists'
 fi
@@ -823,19 +820,19 @@ fi
     # Create clients
     log_info("Creating Keycloak clients using kcadm...")
     clients_script = f"""
-export KEYCLOAK_HOME='/opt/keycloak'
+export KEYCLOAK_HOME='/opt/bitnami/keycloak'
 export PATH="$KEYCLOAK_HOME/bin:$PATH"
 
-kcadm config credentials --server '{keycloak_url}' --realm '{realm}' --user admin --password '{os.environ.get('KEYCLOAK_ADMIN_PASSWORD', '')}'
+kcadm.sh config credentials --server '{keycloak_url}' --realm master --user admin --password '{os.environ.get('KEYCLOAK_ADMIN_PASSWORD', '')}'
 
 echo 'Creating Grafana client...'
-kcadm create clients -r '{realm}' -s clientId={realm}-grafana -s enabled=true -s protocol=openid-connect -s publicClient=false -s standardFlowEnabled=true -s 'redirectUris=["http://localhost:3000/*","http://grafana.infra.svc.cluster.local:3000/*"]' -s webOrigins='["+"]' -s serviceAccountsEnabled=true || true
+kcadm.sh create clients -r '{realm}' -s clientId={realm}-grafana -s enabled=true -s protocol=openid-connect -s publicClient=false -s standardFlowEnabled=true -s 'redirectUris=["http://localhost:3000/*","http://grafana.infra.svc.cluster.local:3000/*"]' -s webOrigins='["+"]' -s serviceAccountsEnabled=true || true
 
 echo 'Creating ArgoCD client...'
-kcadm create clients -r '{realm}' -s clientId={realm}-argocd -s enabled=true -s protocol=openid-connect -s publicClient=false -s standardFlowEnabled=true -s 'redirectUris=["http://localhost:8080/*","http://argocd-server.argocd.svc.cluster.local:8080/*"]' -s webOrigins='["+"]' -s serviceAccountsEnabled=true || true
+kcadm.sh create clients -r '{realm}' -s clientId={realm}-argocd -s enabled=true -s protocol=openid-connect -s publicClient=false -s standardFlowEnabled=true -s 'redirectUris=["http://localhost:8080/*","http://argocd-server.argocd.svc.cluster.local:8080/*"]' -s webOrigins='["+"]' -s serviceAccountsEnabled=true || true
 
 echo 'Creating Headlamp client...'
-kcadm create clients -r '{realm}' -s clientId={realm}-headlamp -s enabled=true -s protocol=openid-connect -s publicClient=false -s standardFlowEnabled=true -s 'redirectUris=["http://localhost:4466/*","http://headlamp.infra.svc.cluster.local/*"]' -s webOrigins='["+"]' -s serviceAccountsEnabled=true || true
+kcadm.sh create clients -r '{realm}' -s clientId={realm}-headlamp -s enabled=true -s protocol=openid-connect -s publicClient=false -s standardFlowEnabled=true -s 'redirectUris=["http://localhost:4466/*","http://headlamp.infra.svc.cluster.local/*"]' -s webOrigins='["+"]' -s serviceAccountsEnabled=true || true
 """
     kubectl_exec("infra", keycloak_pod, clients_script)
 
@@ -844,12 +841,13 @@ kcadm create clients -r '{realm}' -s clientId={realm}-headlamp -s enabled=true -
 
     def get_client_secret(client_id: str) -> str:
         script = f"""
-export KEYCLOAK_HOME='/opt/keycloak'
+export KEYCLOAK_HOME='/opt/bitnami/keycloak'
 export PATH="$KEYCLOAK_HOME/bin:$PATH"
 
-CID=$(kcadm get clients -r master -q clientId={client_id} --fields id 2>/dev/null | tr -d '"')
+kcadm.sh config credentials --server '{keycloak_url}' --realm master --user admin --password '{os.environ.get('KEYCLOAK_ADMIN_PASSWORD', '')}'
+CID=$(kcadm.sh get clients -r '{realm}' -q clientId={client_id} --fields id 2>/dev/null | grep '"id"' | head -1 | sed 's/.*: *"//;s/".*//')
 if [ -n "$CID" ]; then
-    kcadm get clients/$CID/client-secret -r master 2>/dev/null | jq -r '.value' 2>/dev/null || echo ''
+    kcadm.sh get clients/$CID/client-secret -r '{realm}' 2>/dev/null | grep '"value"' | sed 's/.*: *"//;s/".*//'
 fi
 """
         result = kubectl_exec("infra", keycloak_pod, script)
