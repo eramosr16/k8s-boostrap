@@ -14,6 +14,8 @@ spec:
         app: headlamp
     spec:
       serviceAccountName: headlamp
+      securityContext:
+        fsGroup: 10001
       volumes:
         - name: headlamp-config
           emptyDir: {}
@@ -63,7 +65,6 @@ spec:
             runAsNonRoot: true
             runAsUser: 10001
             runAsGroup: 10001
-            fsGroup: 10001
             readOnlyRootFilesystem: true
           volumeMounts:
             - name: headlamp-tmp
@@ -93,5 +94,5 @@ spec:
               ephemeral-storage: 100Mi
             limits:
               cpu: 500m
-              memory: 1Gi
+              memory: 256Mi
               ephemeral-storage: 500Mi

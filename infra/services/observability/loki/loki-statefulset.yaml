@@ -14,6 +14,8 @@ spec:
       labels:
         app: loki
     spec:
+      securityContext:
+        fsGroup: 10001
       containers:
         - name: loki
           image: grafana/loki:3.0.0
@@ -35,7 +37,6 @@ spec:
             runAsNonRoot: true
             runAsUser: 10001
             runAsGroup: 10001
-            fsGroup: 10001
             readOnlyRootFilesystem: true
           resources:
             requests:
@@ -44,7 +45,7 @@ spec:
               ephemeral-storage: 100Mi
             limits:
               cpu: 200m
-              memory: 512Mi
+              memory: 256Mi
               ephemeral-storage: 500Mi
       volumes:
         - name: loki-config

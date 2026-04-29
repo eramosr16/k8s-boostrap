@@ -13,6 +13,8 @@ spec:
       labels:
         app: prometheus
     spec:
+      securityContext:
+        fsGroup: 10001
       containers:
         - name: prometheus
           image: prom/prometheus:v3-distroless
@@ -35,7 +37,6 @@ spec:
             runAsNonRoot: true
             runAsUser: 10001
             runAsGroup: 10001
-            fsGroup: 10001
             readOnlyRootFilesystem: true
           resources:
             requests:
@@ -44,7 +45,7 @@ spec:
               ephemeral-storage: 100Mi
             limits:
               cpu: 500m
-              memory: 2Gi
+              memory: 512Mi
               ephemeral-storage: 500Mi
       volumes:
         - name: prometheus-config

@@ -13,6 +13,8 @@ spec:
         app: promtail
     spec:
       serviceAccountName: promtail
+      securityContext:
+        fsGroup: 10001
       containers:
         - name: promtail
           image: grafana/promtail:2.9.2
@@ -30,7 +32,6 @@ spec:
             runAsNonRoot: true
             runAsUser: 10001
             runAsGroup: 10001
-            fsGroup: 10001
             readOnlyRootFilesystem: true
           resources:
             requests:
@@ -39,7 +40,7 @@ spec:
               ephemeral-storage: 100Mi
             limits:
               cpu: 100m
-              memory: 128Mi
+              memory: 50Mi
               ephemeral-storage: 500Mi
       volumes:
         - name: promtail-config
