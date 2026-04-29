@@ -1,4 +1,9 @@
 .opencode/
 **/registry-config.env
-# Local secrets file for scripts/run-all.sh
+# Local secrets file for scripts
 .env
+# Python virtual environment
+.venv/
+# Python cache
+__pycache__/
+*.pyc

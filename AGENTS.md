@@ -7,9 +7,49 @@ This repo defines a K8s cluster deployed via ArgoCD.
 - `infra/services/` - Platform services (databases, broker, gateway, observability)
 - `infra/applications/` - User-facing applications
 
-## Adding resources
+## Setup
 
-Add YAML manifests to the appropriate directory under `services/` or `applications/`. Follow the structure in `Readme.md`.
+This project uses Python with a virtual environment. Install dependencies:
+
+```bash
+make install
+```
+
+This will create a `.venv` virtual environment and install required packages from `requirements.txt`.
+
+## Scripts
+
+All scripts are now Python-based. Use the Makefile targets:
+
+Bootstrap local K3s cluster:
+```bash
+make bootstrap
+```
+
+Install ArgoCD:
+```bash
+make install-argocd
+```
+
+Run full bootstrap process:
+```bash
+make run-all
+```
+
+Setup OAuth with Keycloak:
+```bash
+make setup-oauth
+```
+
+Verify container images:
+```bash
+make verify-images ARGS="--help"
+```
+
+Or run directly with the virtual environment:
+```bash
+.venv/bin/python scripts/bootstrap.py
+```
 
 ## Commands
 
@@ -21,18 +61,6 @@ kubectl apply --dry-run=client -f <file>.yaml
 Check ArgoCD sync status (run on cluster):
 ```bash
 argocd app get <app-name>
-```
-
-## Scripts
-
-Bootstrap local K3s cluster:
-```bash
-./scripts/bootstrap.sh
-```
-
-Install ArgoCD:
-```bash
-./scripts/install-argocd.sh
 ```
 
 ## OpenSpec

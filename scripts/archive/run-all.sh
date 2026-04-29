@@ -58,9 +58,38 @@ check_requirements() {
     fi
 }
 
+ensure_python_yaml() {
+    if python3 -c "import yaml" 2>/dev/null; then
+        return 0
+    fi
+
+    log_warn "Python 'yaml' module not found. Attempting to install PyYAML..."
+
+    # Try apt-get first (Debian/Ubuntu)
+    if command -v apt-get &> /dev/null; then
+        apt-get update -qq && apt-get install -y -qq python3-yaml 2>/dev/null && return 0
+    fi
+
+    # Try pip3
+    if command -v pip3 &> /dev/null; then
+        pip3 install --quiet --user pyyaml 2>/dev/null && return 0
+    fi
+
+    # Try pip
+    if command -v pip &> /dev/null; then
+        pip install --quiet --user pyyaml 2>/dev/null && return 0
+    fi
+
+    log_error "Failed to install PyYAML. Please install it manually:"
+    log_error "  apt-get install python3-yaml   (Debian/Ubuntu)"
+    log_error "  pip3 install pyyaml             (Other systems)"
+    exit 1
+}
+
 load_cluster_config() {
     if [ -f "$CONFIG_FILE" ]; then
         if command -v python3 &> /dev/null; then
+            ensure_python_yaml
             CLUSTER_DOMAIN=$(python3 -c "
 import yaml
 with open('$CONFIG_FILE') as f:
