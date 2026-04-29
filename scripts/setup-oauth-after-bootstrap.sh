@@ -175,7 +175,7 @@ get_client_secret() {
     secret=$(kc_exec "
         REALM='$KEYCLOAK_REALM'
         kcadm config credentials --server '$KEYCLOAK_URL' --realm master --user admin --password \$KEYCLOAK_ADMIN_PASSWORD
-        CID=\$(kcadm get clients -r '\$REALM' -q clientId=$client_id --fields id 2>/dev/null | tr -d '"')
+        CID=\$(kcadm get clients -r '\$REALM' -q clientId=$client_id --fields id 2>/dev/null | jq -r '.[0].id' 2>/dev/null)
         if [ -z \"\$CID\" ]; then
             exit 0
         fi
@@ -241,16 +241,16 @@ main() {
     wait_for_keycloak
     ensure_realm
 
-    local grafana_redirects="-s 'redirectUris=[\"http://localhost:3000/*\",\"http://${ROUTE_GRAFANA}.infra.svc.cluster.local:3000/*\",\"https://${ROUTE_GRAFANA}.${CLUSTER_DOMAIN}/*\"]'"
-    local grafana_params="-s clientId=${KEYCLOAK_REALM}-grafana -s enabled=true -s protocol=openid-connect -s publicClient=false -s standardFlowEnabled=true $grafana_redirects -s webOrigins='[\"+\"]' -s serviceAccountsEnabled=true"
+    local grafana_redirects="-s redirectUris=[\"http://localhost:3000/*\",\"http://${ROUTE_GRAFANA}.infra.svc.cluster.local:3000/*\",\"https://${ROUTE_GRAFANA}.${CLUSTER_DOMAIN}/*\"]"
+    local grafana_params="-s clientId=${KEYCLOAK_REALM}-grafana -s enabled=true -s protocol=openid-connect -s publicClient=false -s standardFlowEnabled=true $grafana_redirects -s webOrigins=[\"+\"] -s serviceAccountsEnabled=true"
     create_client "${KEYCLOAK_REALM}-grafana" "$grafana_params"
 
-    local argocd_redirects="-s 'redirectUris=[\"http://localhost:8080/*\",\"http://argocd-server.argocd.svc.cluster.local:8080/*\",\"https://${ROUTE_ARGOCD}.${CLUSTER_DOMAIN}/auth/callback\"]'"
-    local argocd_params="-s clientId=${KEYCLOAK_REALM}-argocd -s enabled=true -s protocol=openid-connect -s publicClient=false -s standardFlowEnabled=true $argocd_redirects -s webOrigins='[\"+\"]' -s serviceAccountsEnabled=true"
+    local argocd_redirects="-s redirectUris=[\"http://localhost:8080/*\",\"http://argocd-server.argocd.svc.cluster.local:8080/*\",\"https://${ROUTE_ARGOCD}.${CLUSTER_DOMAIN}/auth/callback\"]"
+    local argocd_params="-s clientId=${KEYCLOAK_REALM}-argocd -s enabled=true -s protocol=openid-connect -s publicClient=false -s standardFlowEnabled=true $argocd_redirects -s webOrigins=[\"+\"] -s serviceAccountsEnabled=true"
     create_client "${KEYCLOAK_REALM}-argocd" "$argocd_params"
 
-    local headlamp_redirects="-s 'redirectUris=[\"http://localhost:4466/*\",\"http://headlamp.infra.svc.cluster.local/*\",\"https://${ROUTE_HEADLAMP}.${CLUSTER_DOMAIN}/*\"]'"
-    local headlamp_params="-s clientId=${KEYCLOAK_REALM}-headlamp -s enabled=true -s protocol=openid-connect -s publicClient=false -s standardFlowEnabled=true $headlamp_redirects -s webOrigins='[\"+\"]' -s serviceAccountsEnabled=true"
+    local headlamp_redirects="-s redirectUris=[\"http://localhost:4466/*\",\"http://headlamp.infra.svc.cluster.local/*\",\"https://${ROUTE_HEADLAMP}.${CLUSTER_DOMAIN}/*\"]"
+    local headlamp_params="-s clientId=${KEYCLOAK_REALM}-headlamp -s enabled=true -s protocol=openid-connect -s publicClient=false -s standardFlowEnabled=true $headlamp_redirects -s webOrigins=[\"+\"] -s serviceAccountsEnabled=true"
     create_client "${KEYCLOAK_REALM}-headlamp" "$headlamp_params"
 
     ensure_secrets
