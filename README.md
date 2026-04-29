@@ -35,6 +35,7 @@ Changes are stored in `openspec/changes/` and organized in an `archive/` subdire
 - **2026-04-29**: Documented how to store GitHub credentials so ArgoCD can access private repos (`argocd-private-github-creds`).
 - **2026-04-29**: Ensured Keycloak reuses PostgreSQL credentials for its database connection so the optimized image can authenticate (`align-keycloak-db-creds`).
 - **2026-04-29**: Updated the Keycloak bootstrap env vars to use `KC_BOOTSTRAP_ADMIN_*`, matching the optimized image’s expectations (change: `align-keycloak-kc-bootstrap-vars`).
+- **2026-04-29**: Added `scripts/setup-oauth-after-bootstrap.sh` and docs for rerunning Keycloak/Grafana/ArgoCD OAuth setup once the cluster is healthy (`setup-oauth-post-bootstrap`).
 - **2026-04-28**: Ensured the Keycloak Bitnami bootstrap env vars point at the right secrets so the admin user comes up automatically (change: `align-keycloak-bootstrap-env`).
 - **2026-04-28**: Updated the Keycloak IAM service manifest to use the optimized Bitnami image and documented the change (change: `update-keycloak-service`).
 - **2026-04-28**: Removed placeholder image overrides from `config.yaml` and the bootstrap script so ArgoCD-manifests drive service images (change: `remove-config-image-placeholders`).
@@ -440,6 +441,18 @@ Secrets use environment variable placeholders that are replaced during deploymen
 
 `scripts/run-all.sh` collects these secrets interactively via `prompt_secrets()` and expects you to type them or export them before running the script. Do not store these credentials in `config.yaml` to avoid leaking secrets into the repository history.
 
+## Recovering OAuth Setup
+
+If the bootstrap run stops when Keycloak or PostgreSQL are unavailable, you can run the targeted recovery script after the cluster and database pods become healthy:
+
+```bash
+KEYCLOAK_ADMIN_PASSWORD="<your-password>" ./scripts/setup-oauth-after-bootstrap.sh
+```
+
+The script reads `KEYCLOAK_ADMIN_PASSWORD` (either exported or sourced from `.env`), derives the cluster domain and route names from `config.yaml` when available, waits for Keycloak to become ready, recreates the `infra` realm plus Grafana/ArgoCD/Headlamp clients, and refreshes the Kubernetes secrets these services consume.
+
+Keep your `.env` file up-to-date so the script picks up the same credential values you used during the original bootstrap.
+
 ### Setting Passwords
 
 Before deploying, set the password by exporting the environment variable:
@@ -467,6 +480,12 @@ export KC_BOOTSTRAP_ADMIN_PASSWORD="your-secure-password"
 ```
 
 Then update the secret file with the actual password or use a tool like `envsubst` to replace the placeholder during deployment.
+
+### Verifying OAuth clients
+
+1. **Grafana** – `kubectl port-forward svc/grafana -n infra 3000:3000`, open `http://localhost:3000`, click the **Keycloak** login option, and ensure the browser redirects to your Keycloak realm and permits a successful sign-in.
+2. **ArgoCD** – `kubectl port-forward svc/argocd-server -n argocd 8080:8080`, visit `http://localhost:8080`, and choose the external OAuth login; you should be redirected to Keycloak and granted access after authentication with a user in `argocd-admins`.
+3. **Headlamp** – `kubectl port-forward svc/headlamp -n infra 4466:80`, generate a token with `kubectl create token headlamp -n infra`, paste it into the Headlamp login prompt, and confirm the UI loads without authentication errors.
 
 ## Pre-Deployment Checklist
 
