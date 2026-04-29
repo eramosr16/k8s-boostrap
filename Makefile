@@ -1,4 +1,4 @@
-.PHONY: venv install clean bootstrap install-argocd services setup-oauth setup-routes post-install verify-images
+.PHONY: venv install clean bootstrap install-argocd services setup-oauth setup-routes post-install verify-images destroy
 
 PYTHON := python3
 VENV_DIR := .venv
@@ -41,6 +41,9 @@ post-install: install
 verify-images: install
 	$(BIN)/python scripts/verify_images.py $(ARGS)
 
+destroy: install
+	$(BIN)/python scripts/destroy.py $(ARGS)
+
 help:
 	@echo "Available targets:"
 	@echo "  venv          - Create virtual environment"
@@ -52,4 +55,5 @@ help:
 	@echo "  setup-routes  - Patch Traefik IngressRoute hostnames from config.yaml"
 	@echo "  post-install  - Run services + oauth + routes (full post-install sequence)"
 	@echo "  verify-images - Verify container images (use ARGS for extra args)"
+	@echo "  destroy       - Stop and uninstall K3s cluster entirely (use ARGS='--yes' to skip confirmation)"
 	@echo "  clean         - Remove virtual environment and cache files"
